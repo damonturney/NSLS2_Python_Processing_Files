@@ -21,22 +21,23 @@ t0 = time.monotonic()
 
 #### Set working directory ##############################
 if sys.platform == 'win32':
-    working_folder='C:\\Users\\EI Administrator\\Desktop\\NSLS2_Data_Processing\\20191105_FXI_Beamtime_Work\\Python_Data_Processing_Files\\'
+    working_folder='C:\\Users\\EI Administrator\\Desktop\\NSLS2_Data_Processing\\20191105_FXI_Beamtime_Work\\NSLS2_Python_Processing_Files\\'
     os.chdir(working_folder)
 
 if sys.platform == 'linux':
-    working_folder='/home/damon/Desktop/NSLS2_DataProcessing/20191105_FXI_Beamtime_Work/Python_Data_Processing_Files/'
+    working_folder='/home/damon/Desktop/NSLS2_DataProcessing/NSLS2_Python_Processing_Files'
     os.chdir(working_folder)
     
 if sys.platform == 'darwin':
-    working_folder='/Users/damon/Desktop/BACKED_UP/WorkFiles/ProjectsGrants/2015_NYSERDA_Birnessite_Project/2019_NSLS2_Synchrotron_Work/20191105_FXI_Beamtime_Work/Python_Data_Processing_Files'
+    working_folder='/Users/damon/Desktop/BACKED_UP/WorkFiles/ProjectsGrants/2015_NYSERDA_Birnessite_Project/2019_NSLS2_Synchrotron_Work/NSLS2_Python_Processing_Files'
     os.chdir(working_folder)
 ##########################################################
     
-    
-    
-### Create list of tif files ##############################
-object_list_allfilesdirectories = pathlib.Path('.')
+
+### Data Directory #######################################
+data_directory='../20191105_FXI_Beamtime_Work/Data_From_Beamline/34563_to_34875/';
+results_directory='../20191105_FXI_Beamtime_Work/Results_Of_Data_Processing/';
+object_list_allfilesdirectories = pathlib.Path(relative_path_2_beamtime_directory+data_directory)
 object_recursiveglob_tiffiles = object_list_allfilesdirectories.glob('*.tif')      
 object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # to paste together a full pathname for a file: "object_list_filenames_tiffiles[i].parents[0].joinpath(object_list_filenames_tiffiles[i].parts[-1][0:-4]"
@@ -45,11 +46,12 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
     
     
 
-def read_xanes_image_metadata(filename):
+def read_FXI_xanes_metadata(filename):  #filename can be 34567.0103  to denote repeat 01, position 03
     if type(filename) != str:
         filename="%.4f" % filename
         filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    h5object    = h5py.File('../Data_From_Beamline/'+filename, 'r')
+    print(filename)
+    h5object    = h5py.File(data_directory+filename, 'r')
     beam_energy = np.array(h5object['X_eng'])
     scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format
     scan_id     = np.array(h5object['scan_id'])
@@ -60,19 +62,35 @@ def read_xanes_image_metadata(filename):
     return( scan_start_time_string, beam_energy, scan_id, notes)
 
 
-def read_xanes_image_all_data(filename):
-    h5object    = h5py.File(filename, 'r')
-    beam_energy = np.array(h5object['X_eng'])
-    images      = np.array(h5object['img_xanes'])
-    dark_images = np.array(h5object['img_dark'])
-    bkg_image   = np.array(h5object['img_bkg'])
-    scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format
-    scan_id     = np.array(h5object['scan_id'])
-    notes       = np.array(h5object['note'])
-    scan_start_time = datetime.datetime.fromtimestamp(scan_time)
-    scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
-    notes = np.array(h5object['note'])   
-    return(images, bkg_image, dark_images, scan_time, beam_energy, scan_id, notes)
+def read_FXI_xanes_images(filename):
+    if type(filename) != str:
+        filename="%.4f" % filename
+        filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+    print(filename)
+    h5object    = h5py.File(data_directory+filename, 'r')
+    images      = np.array(h5object['img_xanes'])  
+    return(images)
+
+
+def find_image_translation(im1,im2):
+    image_product=np.fft.fft2(im1) * np.fft.fft2(im2).conj();
+    cc_image=np.fft.fftshift(np.fft.ifft2(image_product));
+    max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
+    
+    #Now let's test to see if these max indices are a false peak
+    cc_image[max_indices]=0
+    secondary_max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
+    
+    distance_btwn_peaks=np.linalg.norm(max_indices-secondary_max_indices)
+    if distance_btwn_peaks>2:
+        max_indices=secondary_max_indices
+        
+    translation_y = max_indices[0] - im1.shape[0]/2
+    translation_x = max_indices[1] - im1.shape[1]/2
+ 
+    return([translation_y, translation_x])
+    
+
 
 # Read beamline x-ray data
 filename = 'xanes_scan2_id_13161.h5'
