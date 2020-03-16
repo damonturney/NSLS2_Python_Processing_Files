@@ -58,6 +58,7 @@ def read_FXI_xanes_metadata(filename):  #filename can be 34567.0103  to denote r
     scan_start_time = datetime.datetime.fromtimestamp(scan_time)
     scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
     notes = np.array(h5object['note'])   
+    h5object.close()
     return( scan_start_time_string, beam_energy, scan_id, notes)
 
 
@@ -68,6 +69,7 @@ def read_FXI_xanes_images(filename):
     print(filename)
     h5object    = h5py.File(data_directory+filename, 'r')
     images      = np.array(h5object['img_xanes'])  
+    h5object.close()
     return(images)
 
 
@@ -78,6 +80,7 @@ def read_FXI_xanes_single_image(filename,image_number):
     print(filename)
     h5object    = h5py.File(data_directory+filename, 'r')
     images      = np.array(h5object['img_xanes'])  
+    h5object.close()
     return(images[image_number,:,:])
     
 
@@ -139,8 +142,9 @@ def Mn_Cu_image_translation_values(Mn_filename):
     
     
     
-    
-def aligned_Mn_Cu_thickness(Mn_filename):
+#filename MUST be supplied as a number    
+def create_ims_aligned_Mn_Cu(Mn_filename):  #filename MUST be supplied as a number
+    Cu_filename=Mn_filename+1.0
     Mn_ims = read_FXI_xanes_images(Mn_filename);
     Mn_trans = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:])
     Mn_im2_aligned = np.zeros(Mn_ims[0,:,:].shape)
@@ -154,7 +158,7 @@ def aligned_Mn_Cu_thickness(Mn_filename):
     if Mn_trans[0] < 0  and Mn_trans[1] < 0:  Mn_im2_aligned[ -Mn_trans[0]:, -Mn_trans[1]:] = Mn_ims[1,:Mn_trans[0], :Mn_trans[1] ];
     Mn_ims[1,:,:]=Mn_im2_aligned
        
-    Cu_filename=Mn_filename+1.0
+    
     Cu_ims = read_FXI_xanes_images(Cu_filename);
     Cu_trans = find_image_translation(Cu_ims[0,:,:],Cu_ims[1,:,:])  #Cu_trans  is the translation (pixel shift) of Cu image 2 wrt Cu image 1
     Cu2_trans = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:]) #Cu2_trans is the translation (pixel shift) of Cu image 2 wrt Mn image 1
@@ -183,6 +187,22 @@ def aligned_Mn_Cu_thickness(Mn_filename):
     Cu_ims[1,:,:]=Cu_im2_aligned
     
     return(np.concatenate((Mn_ims,Cu_ims),axis=0))
+    
+
+#filename MUST be supplied as a number    
+def save_aligned_h5_file(Mn_filename):  #filename MUST be supplied as a number
+    Mn_filename_string="%.4f" % Mn_filename
+    Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
+    h5object_old = h5py.File(data_directory+Mn_filename_string, 'r')    
+    h5object_new = h5py.File(data_directory+Mn_filename_string[27:-3]+'_aligned.h5', 'w')
+    h5object_old.copy('scan_time',h5object_new)
+    h5object_old.copy('X_eng',    h5object_new)
+    h5object_old.copy('scan_id',  h5object_new)
+    h5object_old.copy('note',     h5object_new)
+    ims=create_ims_aligned_Mn_Cu(Mn_filename)
+    h5object_new.create_dataset('xray_images', shape=(4,1080,1280), dtype=np.float32, data=ims)
+    h5object_old.close()
+    h5object_new.close()
     
     
     
