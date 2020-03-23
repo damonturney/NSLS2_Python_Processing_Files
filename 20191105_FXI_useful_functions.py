@@ -197,8 +197,8 @@ def calculate_optical_thickness(filename): #Run this on the files output from sa
                     sum_square_errors = baseline_sum_squares
                     while(sum_square_errors<=previous_sum_square_errors):
                         previous_sum_square_errors = sum_square_errors
-                        optical_thickness_Bi[m,n] = optical_thickness_Bi[m,n] - 0.0001*np.sign(sum_squares_gradient[5])
-                        optical_thickness_El[m,n] = optical_thickness_El[m,n] + 0.0001*np.sign(sum_squares_gradient[5])
+                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] - 0.0001*np.sign(sum_squares_gradient[5])
+                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_squares_gradient[5])
                         sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
                         if sum_square_errors<=previous_sum_square_errors:
                             optical_thickness_Bi[m,n]=optical_thickness_Bi_test
