@@ -43,8 +43,237 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # to paste together a full pathname for a file: "object_list_filenames_tiffiles[i].parents[0].joinpath(object_list_filenames_tiffiles[i].parts[-1][0:-4]"
 ############################################################
 
+
+### Workflow ##############################################
+# 1) Run create_aligned_h5_file() on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered 
+# 2) Run calculate_optical_thickness() on each of the aligned_images...h5 fiels created in step 1.  Use a command like    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+############################################################
+    
+
+
+#filename MUST be supplied as a number    
+def create_aligned_h5_file(Mn_filename):  #filename MUST be supplied as a number
+    Mn_filename_string="%.4f" % Mn_filename
+    Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
+    h5object_old = h5py.File(data_directory+Mn_filename_string, 'r')    
+    h5object_new = h5py.File(data_directory+'aligned_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
+    h5object_old.copy('scan_time',h5object_new)
+    h5object_old.copy('X_eng',    h5object_new)
+    h5object_old.copy('scan_id',  h5object_new)
+    h5object_old.copy('note',     h5object_new)
+    ims=create_ims_aligned_Mn_Cu(Mn_filename)
+    h5object_new.create_dataset('xray_images', shape=(4,1080,1280), dtype=np.float32, data=ims)
+    h5object_old.close()
+    h5object_new.close()
     
     
+#Run this on the files output from save_aligned_h5_file
+def calculate_optical_thickness(filename): #Run this on the files output from save_aligned_h5_file
+    if type(filename) != str:
+        filename="%.4f" % filename
+        filename='aligned_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+    h5object= h5py.File(data_directory+filename, 'r+')
+    ims     = np.array(h5object['xray_images'])
+    ims[ims<=0.0]=np.median(ims[ims>0]) #so that np.log doesn't create an error
+        
+    # X-ray absorption coefficients in units of 1/mm 
+    a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;
+    a_6520_Cu = 80.899;  a_6600_Cu = 78.209;  a_8970_Cu = 32.903; a_9050_Cu = 249.79;
+    a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
+    a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
+    a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
+    
+    A = np.zeros((3,3))
+    b = np.zeros((3,1))
+    optical_thickness_Cu=np.zeros(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_Mn=np.zeros(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_Bi=np.zeros(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_El=np.zeros(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_C= np.ones(ims[0,:,:].shape,dtype=np.float32)*0.170 #In mm. This is set in stone, not optimized. I have the two PMMA films plus the carbon foil inside  I can't remember how thick the PMMA films are
+    thickness_total = 0.220  #In mm.
+    
+    for m in range(0,ims[0,:,:].shape[0]):
+        if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
+        sys.stdout.flush()
+        for n in range(0,ims[0,:,:].shape[1]):
+            ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
+
+            sum_aMn_aEl = (a_6520_Mn*a_6520_El + a_6600_Mn*a_6600_El + a_8970_Mn*a_8970_El + a_9050_Mn*a_9050_El)
+            sum_aCu_aEl = (a_6520_Cu*a_6520_El + a_6600_Cu*a_6600_El + a_8970_Cu*a_8970_El + a_9050_Cu*a_9050_El)
+            sum_aBi_aEl = (a_6520_Bi*a_6520_El + a_6600_Bi*a_6600_El + a_8970_Bi*a_8970_El + a_9050_Bi*a_9050_El)
+            sum_aMn_aMn = (a_6520_Mn*a_6520_Mn + a_6600_Mn*a_6600_Mn + a_8970_Mn*a_8970_Mn + a_9050_Mn*a_9050_Mn)
+            sum_aCu_aMn = (a_6520_Cu*a_6520_Mn + a_6600_Cu*a_6600_Mn + a_8970_Cu*a_8970_Mn + a_9050_Cu*a_9050_Mn)
+            sum_aBi_aMn = (a_6520_Bi*a_6520_Mn + a_6600_Bi*a_6600_Mn + a_8970_Bi*a_8970_Mn + a_9050_Bi*a_9050_Mn)
+            sum_aBi_aCu = (a_6520_Cu*a_6520_Bi + a_6600_Cu*a_6600_Bi + a_8970_Cu*a_8970_Bi + a_9050_Cu*a_9050_Bi)
+            sum_aCu_aCu = (a_6520_Cu*a_6520_Cu + a_6600_Cu*a_6600_Cu + a_8970_Cu*a_8970_Cu + a_9050_Cu*a_9050_Cu)
+            sum_aBi_aBi = (a_6520_Bi*a_6520_Bi + a_6600_Bi*a_6600_Bi + a_8970_Bi*a_8970_Bi + a_9050_Bi*a_9050_Bi)
+            
+            A[0,:] = [ sum_aMn_aEl - sum_aMn_aMn , sum_aMn_aEl - sum_aCu_aMn , sum_aMn_aEl - sum_aBi_aMn ]
+            A[1,:] = [ sum_aCu_aEl - sum_aCu_aMn , sum_aCu_aEl - sum_aCu_aCu , sum_aCu_aEl - sum_aBi_aCu ]
+            A[2,:] = [ sum_aBi_aEl - sum_aBi_aMn , sum_aBi_aEl - sum_aBi_aCu , sum_aBi_aEl - sum_aBi_aBi ]
+            
+            b[0] = (thickness_total - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
+            b[1] = (thickness_total - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
+            b[2] = (thickness_total - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
+            
+            temp = np.linalg.solve(A, b)
+            optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
+            optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
+            optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
+            optical_thickness_El[m,n] = thickness_total - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] + optical_thickness_Cu[m,n] + optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
+    
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+    sys.stdout.write('\n')
+    
+    #Now search for a lower sum-of-square-error by pairwise swaping of thickness (via all pairwise combinatorics) 
+    test_sum_squares = np.zeros(6)
+    for m in range(0,ims[0,:,:].shape[0]):
+        if np.mod(m,10)==0: sys.stdout.write('\rMaximum Decent, Row: '+str(m))
+        sys.stdout.flush()
+        for n in range(0,ims[0,:,:].shape[1]):
+            for m in range(0,10):
+                baseline_sum_squares =           calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                test_sum_squares = pairwise_thicknessswapping_sum_square_errors(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)                         
+                sum_squares_gradient = test_sum_squares - baseline_sum_squares
+                max_pair = np.argmax(abs(sum_squares_gradient))
+                
+                if max_pair==0:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_squares_gradient[0])
+                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] + 0.0001*np.sign(sum_squares_gradient[0])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
+                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
+                if max_pair==1:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_squares_gradient[1])
+                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] + 0.0001*np.sign(sum_squares_gradient[1])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
+                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
+                if max_pair==2:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_squares_gradient[2])
+                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_squares_gradient[2])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
+                            optical_thickness_El[m,n]=optical_thickness_El_test
+                if max_pair==3:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] - 0.0001*np.sign(sum_squares_gradient[3])
+                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] + 0.0001*np.sign(sum_squares_gradient[3])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
+                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
+                if max_pair==4:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] - 0.0001*np.sign(sum_squares_gradient[4])
+                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_squares_gradient[4])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
+                            optical_thickness_El[m,n]=optical_thickness_El_test
+                if max_pair==5:
+                    previous_sum_square_errors = baseline_sum_squares
+                    sum_square_errors = baseline_sum_squares
+                    while(sum_square_errors<=previous_sum_square_errors):
+                        previous_sum_square_errors = sum_square_errors
+                        optical_thickness_Bi[m,n] = optical_thickness_Bi[m,n] - 0.0001*np.sign(sum_squares_gradient[5])
+                        optical_thickness_El[m,n] = optical_thickness_El[m,n] + 0.0001*np.sign(sum_squares_gradient[5])
+                        sum_square_errors = calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+                        if sum_square_errors<=previous_sum_square_errors:
+                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
+                            optical_thickness_El[m,n]=optical_thickness_El_test
+
+                        
+     #check if the optical_thickness datasets are ALREADY in the h5object, and save data
+    h5object['optical_thickness_Mn'][:]=optical_thickness_Mn if 'optical_thickness_Mn' in h5object.keys()  else h5object.create_dataset('optical_thickness_Mn', shape=(1080,1280), dtype=np.float32, data=optical_thickness_Mn)
+    h5object['optical_thickness_Cu'][:]=optical_thickness_Cu if 'optical_thickness_Cu' in h5object.keys()  else h5object.create_dataset('optical_thickness_Cu', shape=(1080,1280), dtype=np.float32, data=optical_thickness_Cu)
+    h5object['optical_thickness_Bi'][:]=optical_thickness_Bi if 'optical_thickness_Bi' in h5object.keys()  else h5object.create_dataset('optical_thickness_Bi', shape=(1080,1280), dtype=np.float32, data=optical_thickness_Bi)
+    h5object['optical_thickness_C' ][:]=optical_thickness_C  if 'optical_thickness_C'  in h5object.keys()  else h5object.create_dataset('optical_thickness_C' , shape=(1080,1280), dtype=np.float32, data=optical_thickness_C)
+    h5object['optical_thickness_El'][:]=optical_thickness_El if 'optical_thickness_El' in h5object.keys()  else h5object.create_dataset('optical_thickness_El', shape=(1080,1280), dtype=np.float32, data=optical_thickness_El)
+    h5object.close()
+    
+
+    
+    
+    
+#filename MUST be supplied as a number
+def plot_single_pixel_least_squares_data(filename,row,column):   #filename MUST be supplied as a number
+    
+    # X-ray absorption coefficients in units of 1/mm 
+    a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;
+    a_6520_Cu = 80.899;  a_6600_Cu = 78.209;  a_8970_Cu = 32.903; a_9050_Cu = 249.79;
+    a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
+    a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
+    a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
+        
+    images_Mn = read_FXI_xanes_images(filename)
+    scan_start_time_string, beam_energy, scan_id, notes = read_FXI_xanes_metadata(filename)
+    beam_energy_Mn=beam_energy
+    
+    images_Cu = read_FXI_xanes_images(filename+1.0)
+    scan_start_time_string, beam_energy, scan_id, notes = read_FXI_xanes_metadata(filename+1.0)
+    beam_energy_Cu=beam_energy
+ 
+    filename="%.4f" % filename
+    filename='aligned_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+    h5object2= h5py.File(data_directory+filename, 'r') 
+    optical_thickness_Mn= np.array(h5object2['optical_thickness_Mn'])
+    optical_thickness_Cu= np.array(h5object2['optical_thickness_Cu'])
+    optical_thickness_Bi= np.array(h5object2['optical_thickness_Bi'])
+    optical_thickness_C = np.array(h5object2['optical_thickness_C'])
+    optical_thickness_El= np.array(h5object2['optical_thickness_El'])
+    
+    #Plot measured data
+    beam_energies = np.concatenate((beam_energy_Mn,beam_energy_Cu))
+    plt.scatter(beam_energies, np.concatenate((images_Mn[:,row,column],images_Cu[:,row,column])),s=50*np.ones(4),marker='x')
+    
+    #Plot least-squares model results
+    plt.scatter(beam_energies, [np.exp(-a_6520_Mn*optical_thickness_Mn[row,column]), np.exp(-a_6600_Mn*optical_thickness_Mn[row,column]), np.exp(-a_8970_Mn*optical_thickness_Mn[row,column]), np.exp(-a_9050_Mn*optical_thickness_Mn[row,column])],marker='o',facecolors='none',edgecolors='r')
+    plt.scatter(beam_energies, [np.exp(-a_6520_Cu*optical_thickness_Cu[row,column]), np.exp(-a_6600_Cu*optical_thickness_Cu[row,column]), np.exp(-a_8970_Cu*optical_thickness_Cu[row,column]), np.exp(-a_9050_Cu*optical_thickness_Cu[row,column])],marker='o',facecolors='none',edgecolors='g')
+    plt.scatter(beam_energies, [np.exp(-a_6520_Bi*optical_thickness_Bi[row,column]), np.exp(-a_6600_Bi*optical_thickness_Bi[row,column]), np.exp(-a_8970_Bi*optical_thickness_Bi[row,column]), np.exp(-a_9050_Bi*optical_thickness_Bi[row,column])],marker='o',facecolors='none',edgecolors='b')
+    plt.scatter(beam_energies, [np.exp(-a_6520_C *optical_thickness_C[row,column] ), np.exp(-a_6600_C *optical_thickness_C[row,column]) , np.exp(-a_8970_C *optical_thickness_C[row,column]) , np.exp(-a_9050_C*optical_thickness_C[row,column] )], marker='o',facecolors='none',edgecolors='tab:pink')
+    plt.scatter(beam_energies, [np.exp(-a_6520_El*optical_thickness_El[row,column]), np.exp(-a_6600_El*optical_thickness_El[row,column]), np.exp(-a_8970_El*optical_thickness_El[row,column]), np.exp(-a_9050_El*optical_thickness_El[row,column])],marker='o',facecolors='none',edgecolors='tab:brown')
+    model_I_I0_6520=np.exp(-a_6520_Mn*optical_thickness_Mn[row,column] - a_6520_Cu*optical_thickness_Cu[row,column] - a_6520_Bi*optical_thickness_Bi[row,column] - a_6520_C*optical_thickness_C[row,column] - a_6520_El*optical_thickness_El[row,column])
+    model_I_I0_6600=np.exp(-a_6600_Mn*optical_thickness_Mn[row,column] - a_6600_Cu*optical_thickness_Cu[row,column] - a_6600_Bi*optical_thickness_Bi[row,column] - a_6600_C*optical_thickness_C[row,column] - a_6600_El*optical_thickness_El[row,column])
+    model_I_I0_8970=np.exp(-a_8970_Mn*optical_thickness_Mn[row,column] - a_8970_Cu*optical_thickness_Cu[row,column] - a_8970_Bi*optical_thickness_Bi[row,column] - a_8970_C*optical_thickness_C[row,column] - a_8970_El*optical_thickness_El[row,column])
+    model_I_I0_9050=np.exp(-a_9050_Mn*optical_thickness_Mn[row,column] - a_9050_Cu*optical_thickness_Cu[row,column] - a_9050_Bi*optical_thickness_Bi[row,column] - a_9050_C*optical_thickness_C[row,column] - a_9050_El*optical_thickness_El[row,column])
+    plt.scatter(beam_energies, [model_I_I0_6520 , model_I_I0_6600 , model_I_I0_8970 , model_I_I0_9050 ] ,marker='o',facecolors='none',edgecolors='tab:orange')
+    plt.legend(['measured','model: Mn','model: Cu','model: Bi','model: C','model: El','model: Mn,Bi,Cu'])
+
+    plt.figure()
+    plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [optical_thickness_Mn[row,column], optical_thickness_Cu[row,column], optical_thickness_Bi[row,column], optical_thickness_C[row,column], optical_thickness_El[row,column]])
+    
+
+    plt.figure()
+    imshow_image=images_Mn[0,:,:]
+    imshow_image[row,column]=1.0
+    plt.imshow(imshow_image)
+
+
+
+
 
 def read_FXI_xanes_metadata(filename):  #filename can be 34567.0103  to denote repeat 01, position 03
     if type(filename) != str:
@@ -73,16 +302,6 @@ def read_FXI_xanes_images(filename):
     return(images)
 
 
-def read_FXI_xanes_single_image(filename,image_number):
-    if type(filename) != str:
-        filename="%.4f" % filename
-        filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    print(filename)
-    h5object    = h5py.File(data_directory+filename, 'r')
-    images      = np.array(h5object['img_xanes'])  
-    h5object.close()
-    return(images[image_number,:,:])
-    
 
 #This function returns the number of pixels that the second image is translated (positive going [downward, to-the-right]) with respect to the first image
 def find_image_translation(im1,im2):  
@@ -110,6 +329,74 @@ def find_image_translation(im1,im2):
     #
     return(np.array([translation_y, translation_x]).astype('int'))
     
+    
+    
+def pairwise_thicknessswapping_sum_square_errors(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El):
+    #Calculate the test case sum of squared errors
+    test_thickness1 = optical_thickness_Mn[m,n] + 0.0001
+    test_thickness2 = optical_thickness_Cu[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*test_thickness1 + a_6520_Cu*test_thickness2 + a_6520_Bi*optical_thickness_Bi[m,n] + a_6520_C*optical_thickness_C[m,n] + a_6520_El*optical_thickness_El[m,n])**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*test_thickness1 + a_6600_Cu*test_thickness2 + a_6600_Bi*optical_thickness_Bi[m,n] + a_6600_C*optical_thickness_C[m,n] + a_6600_El*optical_thickness_El[m,n])**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*test_thickness1 + a_8970_Cu*test_thickness2 + a_8970_Bi*optical_thickness_Bi[m,n] + a_8970_C*optical_thickness_C[m,n] + a_8970_El*optical_thickness_El[m,n])**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*test_thickness1 + a_9050_Cu*test_thickness2 + a_9050_Bi*optical_thickness_Bi[m,n] + a_9050_C*optical_thickness_C[m,n] + a_9050_El*optical_thickness_El[m,n])**2
+    test_sum_squares[0] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
+    
+    test_thickness1 = optical_thickness_Mn[m,n] + 0.0001
+    test_thickness2 = optical_thickness_Bi[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*test_thickness1 + a_6520_Cu*optical_thickness_Cu[m,n] + a_6520_Bi*test_thickness2 + a_6520_C*optical_thickness_C[m,n] + a_6520_El*optical_thickness_El[m,n])**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*test_thickness1 + a_6600_Cu*optical_thickness_Cu[m,n] + a_6600_Bi*test_thickness2 + a_6600_C*optical_thickness_C[m,n] + a_6600_El*optical_thickness_El[m,n])**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*test_thickness1 + a_8970_Cu*optical_thickness_Cu[m,n] + a_8970_Bi*test_thickness2 + a_8970_C*optical_thickness_C[m,n] + a_8970_El*optical_thickness_El[m,n])**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*test_thickness1 + a_9050_Cu*optical_thickness_Cu[m,n] + a_9050_Bi*test_thickness2 + a_9050_C*optical_thickness_C[m,n] + a_9050_El*optical_thickness_El[m,n])**2
+    test_sum_squares[1] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050  
+    
+    test_thickness1 = optical_thickness_Mn[m,n] + 0.0001
+    test_thickness2 = optical_thickness_El[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*test_thickness1 + a_6520_Cu*optical_thickness_Cu[m,n] + a_6520_Bi*optical_thickness_Bi[m,n] + a_6520_C*optical_thickness_C[m,n] + a_6520_El*test_thickness2)**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*test_thickness1 + a_6600_Cu*optical_thickness_Cu[m,n] + a_6600_Bi*optical_thickness_Bi[m,n] + a_6600_C*optical_thickness_C[m,n] + a_6600_El*test_thickness2)**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*test_thickness1 + a_8970_Cu*optical_thickness_Cu[m,n] + a_8970_Bi*optical_thickness_Bi[m,n] + a_8970_C*optical_thickness_C[m,n] + a_8970_El*test_thickness2)**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*test_thickness1 + a_9050_Cu*optical_thickness_Cu[m,n] + a_9050_Bi*optical_thickness_Bi[m,n] + a_9050_C*optical_thickness_C[m,n] + a_9050_El*test_thickness2)**2
+    test_sum_squares[2] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050                
+    
+    test_thickness1 = optical_thickness_Cu[m,n] + 0.0001
+    test_thickness2 = optical_thickness_Bi[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*optical_thickness_Mn[m,n] + a_6520_Cu*test_thickness1 + a_6520_Bi*test_thickness2 + a_6520_C*optical_thickness_C[m,n] + a_6520_El*optical_thickness_El[m,n])**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*optical_thickness_Mn[m,n] + a_6600_Cu*test_thickness1 + a_6600_Bi*test_thickness2 + a_6600_C*optical_thickness_C[m,n] + a_6600_El*optical_thickness_El[m,n])**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*optical_thickness_Mn[m,n] + a_8970_Cu*test_thickness1 + a_8970_Bi*test_thickness2 + a_8970_C*optical_thickness_C[m,n] + a_8970_El*optical_thickness_El[m,n])**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*optical_thickness_Mn[m,n] + a_9050_Cu*test_thickness1 + a_9050_Bi*test_thickness2 + a_9050_C*optical_thickness_C[m,n] + a_9050_El*optical_thickness_El[m,n])**2
+    test_sum_squares[3] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
+    
+    test_thickness1 = optical_thickness_Cu[m,n] + 0.0001
+    test_thickness2 = optical_thickness_El[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*optical_thickness_Mn[m,n] + a_6520_Cu*test_thickness1 + a_6520_Bi*optical_thickness_Bi[m,n] + a_6520_C*optical_thickness_C[m,n] + a_6520_El*test_thickness2)**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*optical_thickness_Mn[m,n] + a_6600_Cu*test_thickness1 + a_6600_Bi*optical_thickness_Bi[m,n] + a_6600_C*optical_thickness_C[m,n] + a_6600_El*test_thickness2)**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*optical_thickness_Mn[m,n] + a_8970_Cu*test_thickness1 + a_8970_Bi*optical_thickness_Bi[m,n] + a_8970_C*optical_thickness_C[m,n] + a_8970_El*test_thickness2)**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*optical_thickness_Mn[m,n] + a_9050_Cu*test_thickness1 + a_9050_Bi*optical_thickness_Bi[m,n] + a_9050_C*optical_thickness_C[m,n] + a_9050_El*test_thickness2)**2
+    test_sum_squares[4] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
+    
+    test_thickness1 = optical_thickness_Bi[m,n] + 0.0001
+    test_thickness2 = optical_thickness_El[m,n] - 0.0001
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*optical_thickness_Mn[m,n] + a_6520_Cu*optical_thickness_Cu[m,n] + a_6520_Bi*test_thickness1 + a_6520_C*optical_thickness_C[m,n] + a_6520_El*test_thickness2)**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*optical_thickness_Mn[m,n] + a_6600_Cu*optical_thickness_Cu[m,n] + a_6600_Bi*test_thickness1 + a_6600_C*optical_thickness_C[m,n] + a_6600_El*test_thickness2)**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*optical_thickness_Mn[m,n] + a_8970_Cu*optical_thickness_Cu[m,n] + a_8970_Bi*test_thickness1 + a_8970_C*optical_thickness_C[m,n] + a_8970_El*test_thickness2)**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*optical_thickness_Mn[m,n] + a_9050_Cu*optical_thickness_Cu[m,n] + a_9050_Bi*test_thickness1 + a_9050_C*optical_thickness_C[m,n] + a_9050_El*test_thickness2)**2
+    test_sum_squares[5] = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
+
+    return(test_sum_squares)
+    
+    
+    
+    
+def calculate_baseline_sum_squares(m,n,ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El):
+    #Calculate the baseline sum of squared errors
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*optical_thickness_Mn[m,n] + a_6520_Cu*optical_thickness_Cu[m,n] + a_6520_Bi*optical_thickness_Bi[m,n] + a_6520_C*optical_thickness_C[m,n] + a_6520_El*optical_thickness_El[m,n])**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*optical_thickness_Mn[m,n] + a_6600_Cu*optical_thickness_Cu[m,n] + a_6600_Bi*optical_thickness_Bi[m,n] + a_6600_C*optical_thickness_C[m,n] + a_6600_El*optical_thickness_El[m,n])**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*optical_thickness_Mn[m,n] + a_8970_Cu*optical_thickness_Cu[m,n] + a_8970_Bi*optical_thickness_Bi[m,n] + a_8970_C*optical_thickness_C[m,n] + a_8970_El*optical_thickness_El[m,n])**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*optical_thickness_Mn[m,n] + a_9050_Cu*optical_thickness_Cu[m,n] + a_9050_Bi*optical_thickness_Bi[m,n] + a_9050_C*optical_thickness_C[m,n] + a_9050_El*optical_thickness_El[m,n])**2
+    baseline_sum_squares = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
+    return(baseline_sum_squares)
+
+
+
 
 def cross_correlation_map(im1,im2):
     image_product=np.fft.fft2(im1) * np.fft.fft2(im2).conj();
@@ -147,7 +434,7 @@ def create_ims_aligned_Mn_Cu(Mn_filename):  #filename MUST be supplied as a numb
     Cu_filename=Mn_filename+1.0
     Mn_ims = read_FXI_xanes_images(Mn_filename);
     Mn_trans = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:])
-    Mn_im2_aligned = np.zeros(Mn_ims[0,:,:].shape)
+    Mn_im2_aligned = np.zeros(Mn_ims[0,:,:].shape) + np.min(Mn_ims) #add np.min(Mn_ims) so that np.log doesn't create an error
     #Now let's actually shift the 2nd Mn image so it's aligned with the 1st Mn image
     if Mn_trans[0]== 0  and Mn_trans[1]== 0:  Mn_im2_aligned[  Mn_trans[0]:,  Mn_trans[1]:] = Mn_ims[1, Mn_trans[0]:, Mn_trans[1]:];       
     if Mn_trans[0] > 0  and Mn_trans[1] > 0:  Mn_im2_aligned[:-Mn_trans[0] ,:-Mn_trans[1] ] = Mn_ims[1, Mn_trans[0]:, Mn_trans[1]:];       
@@ -163,8 +450,8 @@ def create_ims_aligned_Mn_Cu(Mn_filename):  #filename MUST be supplied as a numb
     Cu_trans = find_image_translation(Cu_ims[0,:,:],Cu_ims[1,:,:])  #Cu_trans  is the translation (pixel shift) of Cu image 2 wrt Cu image 1
     Cu2_trans = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:]) #Cu2_trans is the translation (pixel shift) of Cu image 2 wrt Mn image 1
     Cu1_trans = Cu2_trans - Cu_trans                            #Cu1_trans is the translation (pixel shift) of Cu image 1 wrt Mn image 1
-    Cu_im1_aligned = np.zeros(Cu_ims[0,:,:].shape)
-    Cu_im2_aligned = np.zeros(Cu_ims[0,:,:].shape)            
+    Cu_im1_aligned = np.zeros(Cu_ims[0,:,:].shape) + np.min(Mn_ims) #add np.min(Mn_ims) so that np.log doesn't create an error
+    Cu_im2_aligned = np.zeros(Cu_ims[0,:,:].shape) + np.min(Mn_ims) #add np.min(Mn_ims) so that np.log doesn't create an error      
     #Now let's actually shift the 2nd Cu image so it's aligned with the 1st Mn image
     if Cu2_trans[0]== 0  and Cu2_trans[1]== 0:  Cu_im2_aligned[  Cu2_trans[0]:,  Cu2_trans[1]:] = Cu_ims[1, Cu2_trans[0]:, Cu2_trans[1]:];       
     if Cu2_trans[0] > 0  and Cu2_trans[1] > 0:  Cu_im2_aligned[:-Cu2_trans[0] ,:-Cu2_trans[1] ] = Cu_ims[1, Cu2_trans[0]:, Cu2_trans[1]:];       
@@ -189,22 +476,8 @@ def create_ims_aligned_Mn_Cu(Mn_filename):  #filename MUST be supplied as a numb
     return(np.concatenate((Mn_ims,Cu_ims),axis=0))
     
 
-#filename MUST be supplied as a number    
-def save_aligned_h5_file(Mn_filename):  #filename MUST be supplied as a number
-    Mn_filename_string="%.4f" % Mn_filename
-    Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
-    h5object_old = h5py.File(data_directory+Mn_filename_string, 'r')    
-    h5object_new = h5py.File(data_directory+Mn_filename_string[27:-3]+'_aligned.h5', 'w')
-    h5object_old.copy('scan_time',h5object_new)
-    h5object_old.copy('X_eng',    h5object_new)
-    h5object_old.copy('scan_id',  h5object_new)
-    h5object_old.copy('note',     h5object_new)
-    ims=create_ims_aligned_Mn_Cu(Mn_filename)
-    h5object_new.create_dataset('xray_images', shape=(4,1080,1280), dtype=np.float32, data=ims)
-    h5object_old.close()
-    h5object_new.close()
-    
-    
+
+
     
     
 def old_stuff():
