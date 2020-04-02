@@ -76,8 +76,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
     
 
 
-#filename MUST be supplied as a number    
-def internally_align_h5_file(Mn_filename,cc_search_distance):  #filename MUST be supplied as a number,    cc_search_distance is the cross correlation search distance
+#filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
+def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
     h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
@@ -85,44 +85,42 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):  #filename MUST be
     h5object_old.copy('scan_time',h5object_new)
     h5object_old.copy('scan_id',  h5object_new)
     h5object_old.copy('note',     h5object_new)
-    buffer_edges = 150
+    buffer_edges = 100
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
     beam_energies_Mn, Mn_ims = read_FXI_xanes_images(Mn_filename); 
-    translation1, error = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], cc_search_distance)
-    im_num_rows = Mn_ims[0,:,:].shape[0]
-    im_num_cols = Mn_ims[0,:,:].shape[1]
+    translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     # Now actually do the  shift
-    Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, translation1, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(translation1[1]))] = 0.1234567890123456
-    Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(translation1[1])) + im_num_cols:] = 0.1234567890123456
-    Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(translation1[0])),:] = 0.1234567890123456
-    Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(translation1[0])) + im_num_rows:,:] = 0.1234567890123456
+    Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.1234567890123456
+    Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
+    Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.1234567890123456
+    Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
     
     ##### Shift the Cu images to be aligned with the 1st Mn image
     beam_energies_Cu, Cu_ims = read_FXI_xanes_images(Mn_filename+1.0);  
-    translation2, error = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], cc_search_distance)
-    translation3, error = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], cc_search_distance)
+    translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], cc_search_distance)
+    translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     # Now actually do the  shift
-    Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, translation2, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-    Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, translation3, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
 
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(translation2[1]))] = 0.1234567890123456
-    Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(translation2[1])) + im_num_cols:] = 0.1234567890123456
-    Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(translation2[0])),:] = 0.1234567890123456
-    Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(translation2[0])) + im_num_rows:,:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(translation3[1]))] = 0.1234567890123456
-    Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(translation3[1])) + im_num_cols:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(translation3[0])),:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(translation3[0])) + im_num_rows:,:] = 0.1234567890123456
+    Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.1234567890123456
+    Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation2[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
+    Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(-translation2[0])),:] = 0.1234567890123456
+    Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(-translation2[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
+    Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation3[1]))] = 0.1234567890123456
+    Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation3[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
+    Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation3[0])),:] = 0.1234567890123456
+    Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation3[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
     
     # Collect an concatenate the data into single matrices
     beam_energies = np.concatenate((beam_energies_Mn, beam_energies_Cu))
@@ -131,7 +129,7 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):  #filename MUST be
     # Stuff the data into the h5 file
     h5object_new.create_dataset('translations', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
     h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
-    h5object_new.create_dataset('xray_images', shape=(4 , im_num_rows + 2*buffer_edges , im_num_cols + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
+    h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
     h5object_old.close()
     h5object_new.close()
     
@@ -170,10 +168,10 @@ def align_processed_images_time_series(file_numbers):  #filename MUST be supplie
         
         #Find out how much translation to move each image
         cc_search_distance = 10
-        translation1, error1 = find_image_translation( xanes_raw_ims1[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation2, error2 = find_image_translation( xanes_raw_ims1[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation3, error3 = find_image_translation( xanes_raw_ims1[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation4, error4 = find_image_translation( xanes_raw_ims1[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
+        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
+        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
+        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
+        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
 
         # Calculate the averaged shift to use (weighted by how much error ocurred on each calculation of the images translation)
         sum_inverse_errors = 1/error1 + 1/error2 + 1/error3 + 1/error4
@@ -501,7 +499,6 @@ def read_image_from_processed_file(filename,which_image='all'):
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')
-    xray_images = np.array(h5object['xray_images'])
 #    optical_thickness_Mn= np.array(h5object['optical_thickness_Mn'])
 #    optical_thickness_Cu= np.array(h5object['optical_thickness_Cu'])
 #    optical_thickness_Bi= np.array(h5object['optical_thickness_Bi'])
@@ -509,9 +506,16 @@ def read_image_from_processed_file(filename,which_image='all'):
 #    optical_thickness_El= np.array(h5object['optical_thickness_El'])
     
     if which_image == 'all':
+        xray_images = np.array(h5object['xray_images'])
+        optical_thickness_Mn = np.array(h5object['optical_thickness_Mn'])
+        optical_thickness_Cu = np.array(h5object['optical_thickness_Cu'])
+        optical_thickness_Bi = np.array(h5object['optical_thickness_Bi'])
+        optical_thickness_C = np.array(h5object['optical_thickness_C'])
+        optical_thickness_El = np.array(h5object['optical_thickness_El'])
         return(np.stack((xray_images,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
     
     if which_image == 'xray_images':
+        xray_images = np.array(h5object['xray_images'])
         return(xray_images)
 
     if which_image == 'Mn_raw_im1':
@@ -609,26 +613,21 @@ def find_image_translation( im1, im2, im1_reduction):
     # im1_reduction is the reduction in size of im2 so that it can be used for cross-correlations at different locations on top of im1
     
     # Rreduce the size of im2 so that it can be translated as a window over the top of im1
-    im2_reduced = im2[im1_reduction:-im1_reduction, im1_reduction:-im1_reduction ]
+    im2_reduced = im2[im1_reduction[2]:-im1_reduction[3], im1_reduction[0]:-im1_reduction[1] ]
     
     # Calculate the cross correlations
     cc_image=erc_R(im1, im2_reduced)   #cross correlation image
 
     # Figure out the translation to align im2 to im1
     max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
-    translation_y = np.float64(max_indices[0] - im1_reduction)
-    translation_x = np.float64(max_indices[1] - im1_reduction)
     
     ## Now do subpixel resolution
-    y_data = cc_image[max_indices[0]-1 : max_indices[0]+2, max_indices[1]                      ]
-    x_data = cc_image[max_indices[0]                     , max_indices[1]-1 : max_indices[1]+2 ]
-    print(max_indices, x_data)
-    print(max_indices[1]-1,max_indices[1]+2)
-    plt.imshow(cc_image)
+    y_data = np.float64(cc_image[max_indices[0]-1 : max_indices[0]+2, max_indices[1]                      ])
+    x_data = np.float64(cc_image[max_indices[0]                     , max_indices[1]-1 : max_indices[1]+2 ])
     y_data = y_data - np.min(y_data)
     x_data = x_data - np.min(x_data)
-    translation_y = translation_y + ( -1*y_data[0] + 0*y_data[1] + 1*y_data[2] ) / np.sum(y_data)
-    translation_x = translation_x + ( -1*x_data[0] + 0*x_data[1] + 1*x_data[2] ) / np.sum(x_data)
+    translation_y = np.float64(im1_reduction[2] - (max_indices[0] + ( +1*y_data[0] + 0*y_data[1] - 1*y_data[2] ) / np.sum(y_data)) ) #the +/- signs are switched on +1*y_data[0] + 0*y_data[1] - 1*y_data[2] because the ydata runs from top to bottom
+    translation_x = np.float64(im1_reduction[0] - (max_indices[1] + ( -1*x_data[0] + 0*x_data[1] + 1*x_data[2] ) / np.sum(x_data)) )
     #a = np.arange(max_indices[0]-5, max_indices[0]+5.001,0.1)
     #b = np.arange(max_indices[0]-5, max_indices[0]+5.001,1.0)
     #c = np.arange(max_indices[1]-5, max_indices[1]+5.001,0.1)
@@ -640,7 +639,7 @@ def find_image_translation( im1, im2, im1_reduction):
     
     error = 1 #This is a dummy number until I figure out how to calculate error
     
-    return(np.array([translation_y, translation_x]), error)
+    return(np.array([translation_y, translation_x]), error, cc_image)
     
     
 
