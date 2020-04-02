@@ -77,7 +77,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 #filename MUST be supplied as a number    
-def internally_align_h5_file(Mn_filename):  #filename MUST be supplied as a number
+def internally_align_h5_file(Mn_filename,cc_search_distance):  #filename MUST be supplied as a number,    cc_search_distance is the cross correlation search distance
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
     h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
@@ -86,7 +86,6 @@ def internally_align_h5_file(Mn_filename):  #filename MUST be supplied as a numb
     h5object_old.copy('scan_id',  h5object_new)
     h5object_old.copy('note',     h5object_new)
     buffer_edges = 150
-    cc_search_distance = 50  # Cross correlation search distance
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
     beam_energies_Mn, Mn_ims = read_FXI_xanes_images(Mn_filename); 
