@@ -623,6 +623,9 @@ def find_image_translation( im1, im2, im1_reduction):
     ## Now do subpixel resolution
     y_data = cc_image[max_indices[0]-1 : max_indices[0]+2, max_indices[1]                      ]
     x_data = cc_image[max_indices[0]                     , max_indices[1]-1 : max_indices[1]+2 ]
+    print(max_indices, x_data)
+    print(max_indices[1]-1,max_indices[1]+2)
+    plt.imshow(cc_image)
     y_data = y_data - np.min(y_data)
     x_data = x_data - np.min(x_data)
     translation_y = translation_y + ( -1*y_data[0] + 0*y_data[1] + 1*y_data[2] ) / np.sum(y_data)
