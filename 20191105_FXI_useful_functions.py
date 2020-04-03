@@ -70,14 +70,14 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 ### Workflow ##############################################
 # 1) Run internally_align_h5_file(34567,[50,350,200,200]) on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered 
-# 2) Run align_processed_images_time_series([34567,34569],[50,350,200,200]) on each of the processed_images...h5 fiels created in step 1.  Use a command like    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 2) Run align_processed_images_time_series([34567,34569],[50,350,200,200], []) on each of the processed_images...h5 fiels created in step 1.  The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) 
 ############################################################
     
 
 
 #filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
-def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
+def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
     h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
@@ -89,7 +89,7 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_dist
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
     beam_energies_Mn, Mn_ims = read_FXI_xanes_images(Mn_filename); 
-    translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], cc_search_distance)
+    translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
@@ -104,8 +104,8 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_dist
     
     ##### Shift the Cu images to be aligned with the 1st Mn image
     beam_energies_Cu, Cu_ims = read_FXI_xanes_images(Mn_filename+1.0);  
-    translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], cc_search_distance)
-    translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], cc_search_distance)
+    translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
+    translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
@@ -170,10 +170,10 @@ def align_processed_images_time_series(file_numbers,cc_search_distance):  #filen
         debuffer[3] = int(np.max([ np.max(np.where(xanes_raw_ims1[:,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[1])    ,  np.max(np.where(xanes_raw_ims2[:,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[1])     ])  +  im_half_rows )
         
         #Find out how much translation to move each image
-        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
-        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , cc_search_distance)
+        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
+        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
+        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
+        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
 
         # Calculate the averaged shift to use (weighted by how much error ocurred on each calculation of the images translation)
         sum_inverse_errors = 1/error1 + 1/error2 + 1/error3 + 1/error4
@@ -614,23 +614,20 @@ def show_cross_correlation_map(im1,im2,debuffer=0):
 
 
 #This function returns the number of pixels that the second image is translated [positive is going downward, positive is going to-the-right] with respect to the first image
-def find_image_translation( im1, im2, im1_reduction): 
+def find_image_translation( im1, im2, im2_cropping, cc_search_distance): 
     # debuffer is meant to elimated the SAME amount of padding on im1 and im2 BEFORE the im2_masking is applied
-    # im1_reduction is the reduction in size of im2 so that it can be used for cross-correlations at different locations on top of im1
-    
-    # Rreduce the size of im2 so that it can be translated as a window over the top of im1
-    im2_reduced = im2[im1_reduction[2]:-im1_reduction[3], im1_reduction[0]:-im1_reduction[1] ]
+    # im2_cropping is the reduction in size of im2 so that it can be used for cross-correlations at different locations on top of im1
     
     # Calculate the cross correlations
-    cc_image=erc_R(im1, im2_reduced)   #cross correlation image
+    cc_image=erc_R(im1, im2, im2_cropping, cc_search_distance)   #cross correlation image
     plt.imshow(cc_image)
 
     # Figure out the translation to align im2 to im1
     max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
-    translation_y = np.float64(im1_reduction[2] - max_indices[0])  
-    translation_x = np.float64(im1_reduction[0] - max_indices[1]) 
+    translation_y = np.float64(im2_cropping[2] - max_indices[0])  
+    translation_x = np.float64(im2_cropping[0] - max_indices[1]) 
 
-    ## Now do subpixel resolution
+    ## Now do subpixel resolution.  I DONT DO SUBPIXEL RESOLUTOIN NOWADAys BECAUSE IT REQUIRES THE SUBSEQUENT SHIFT OPERATIONS TO USE INTERPOLATIONS OF THE WHOLE IMAGE WHICH BLUR THE IMAGE
     y_data = np.float64(cc_image[max_indices[0]-1 : max_indices[0]+2, max_indices[1]                      ])
     x_data = np.float64(cc_image[max_indices[0]                     , max_indices[1]-1 : max_indices[1]+2 ])
     y_data = y_data - np.min(y_data)
@@ -652,27 +649,30 @@ def find_image_translation( im1, im2, im1_reduction):
     
     
 
-def erc_R(im1_bigger, im2):
+def erc_R(im1, im2_orig, im2_cropping, cc_search_distance):
+    
+    # Rreduce the size of im2 so that it can be translated as a window over the top of im1
+    im2 = im2_orig[im2_cropping[2]:-im2_cropping[3], im2_cropping[0]:-im2_cropping[1] ]
+    
     #im1 should be bigger than im2, so that im2 can be used for cross-correlations at different locations on top of im1
     #    %For choosing the two sub-images to correlate:
-    #    %   m is the offset, measured in pixels, of the searching window to-the-right. The searching window pans across im1_bigger
-    #    %   n is the offset, measured in pixels, of the searching window down. The searching window pans across im1_bigger
+    #    %   m is the offset, measured in pixels, of the searching window to-the-right. The searching window pans across im1
+    #    %   n is the offset, measured in pixels, of the searching window down. The searching window pans across im1
     
-    winsize1=im1_bigger.shape
-    length_im1=len(im1_bigger[:]);
+    winsize1=im1.shape
     winsize2=im2.shape;
     variance_im2=np.var(im2);
     length_im2=len(im2[:]);
     
     R   = np.ones((winsize1[0]-winsize2[0]+1,winsize1[1]-winsize2[1]+1))*0.012345678901
-    im1 = np.ones(im2.shape)
+    im1_subwindow = np.ones(im2.shape)
     
-    for m in range(0,winsize1[1]-winsize2[1]+1,3):
-        for n in range(0,winsize1[0]-winsize2[0]+1,3):
+    for m in range(im2_cropping[0]-cc_search_distance[0],im2_cropping[0]+1+cc_search_distance[1],3):
+        for n in range(im2_cropping[2]-cc_search_distance[2],im2_cropping[2]+1+cc_search_distance[3],3):
             #print(m,n)
-            im1[:,:]=im1_bigger[n:n+winsize2[0]-1+1,m:m+winsize2[1]-1+1];
+            im1_subwindow[:,:]=im1[n:n+winsize2[0]-1+1,m:m+winsize2[1]-1+1];
             #%I use R[n+winsize/2,m+winsize/2] in order to keep in line with Kristof Sveen's convention on the meaning of R
-            R[n,m]=np.sum((im2[:]-np.mean(im2[:])) * (im1[:]-np.mean(im1[:]))) / (length_im2-1)/np.sqrt(variance_im2*np.var(im1[:]))  
+            R[n,m]=np.sum((im2[:]-np.mean(im2[:])) * (im1_subwindow[:]-np.mean(im1_subwindow[:]))) / (length_im2-1)/np.sqrt(variance_im2*np.var(im1_subwindow[:]))  
     
     max_indices = np.array(np.unravel_index(np.argmax(R,axis=None), R.shape))
     focused_indices=[]
@@ -684,8 +684,8 @@ def erc_R(im1_bigger, im2):
     for i in range(0,len(focused_indices)):
         n = focused_indices[i][0]
         m = focused_indices[i][1]
-        im1[:,:]=im1_bigger[n:n+winsize2[0]-1+1,m:m+winsize2[1]-1+1]
-        R[n,m]=np.sum((im2[:]-np.mean(im2[:])) * (im1[:]-np.mean(im1[:]))) / (length_im2-1)/np.sqrt(variance_im2*np.var(im1[:]))  
+        im1_subwindow[:,:]=im1[n:n+winsize2[0]-1+1,m:m+winsize2[1]-1+1]
+        R[n,m]=np.sum((im2[:]-np.mean(im2[:])) * (im1_subwindow[:]-np.mean(im1_subwindow[:]))) / (length_im2-1)/np.sqrt(variance_im2*np.var(im1_subwindow[:]))  
         
     return(R)
 
@@ -695,19 +695,21 @@ def erc_R(im1_bigger, im2):
 #filename MUST be supplied as a number and must be the Mn raw image file
 def shift_image_integer(im_old,translation):  #filename MUST be supplied as a number and must be the Mn raw image file
     
-    translation = [np.int(np.round(-translation[0])), np.int(np.round(-translation[0])), ]
+    translation = [np.int(np.round(translation[0])), np.int(np.round(translation[1])), ]
 
     #Create the buffered images
     im_new = np.ones(im_old.shape)*0.1234567890123456
     
-    #Now let's actually shift the 2nd Mn image so it's aligned with the 1st Mn image
-    if translation[0]== 0  and translation[1]== 0:  im_new[  translation[0]:,  translation[1]:] = im_old[ translation[0]:, translation[1]:];       
-    if translation[0] > 0  and translation[1] > 0:  im_new[:-translation[0] ,:-translation[1] ] = im_old[ translation[0]:, translation[1]:];       
-    if translation[0] < 0  and translation[1]== 0:  im_new[ -translation[0]:,  translation[1]:] = im_old[:translation[0],  translation[1]:];    
-    if translation[0] < 0  and translation[1] > 0:  im_new[ -translation[0]:,:-translation[1] ] = im_old[:translation[0],  translation[1]:];    
-    if translation[0]== 0  and translation[1] < 0:  im_new[  translation[0]:, -translation[1]:] = im_old[ translation[0]:,:translation[1] ];   
-    if translation[0] > 0  and translation[1] < 0:  im_new[:-translation[0] , -translation[1]:] = im_old[ translation[0]:,:translation[1] ];   
-    if translation[0] < 0  and translation[1] < 0:  im_new[ -translation[0]:, -translation[1]:] = im_old[:translation[0], :translation[1] ];
+    #Now let's actually shift the image 
+    if translation[0]== 0  and translation[1]== 0:  im_new[  translation[0]:,  translation[1]:] = im_old[  translation[0]:,  translation[1]:];       
+    if translation[0]== 0  and translation[1] > 0:  im_new[  translation[0]:,  translation[1]:] = im_old[  translation[0]:,:-translation[1]];   
+    if translation[0]== 0  and translation[1] < 0:  im_new[  translation[0]:,: translation[1] ] = im_old[  translation[0]:, -translation[1]:];   
+    if translation[0] > 0  and translation[1]== 0:  im_new[  translation[0]:,  translation[1]:] = im_old[:-translation[0] ,  translation[1]:];    
+    if translation[0] < 0  and translation[1]== 0:  im_new[: translation[0]:,  translation[1]:] = im_old[ -translation[0]:,  translation[1]:];    
+    if translation[0] < 0  and translation[1] < 0:  im_new[: translation[0] ,: translation[1] ] = im_old[ -translation[0]:, -translation[1]:];       
+    if translation[0] > 0  and translation[1] < 0:  im_new[  translation[0]:,: translation[1] ] = im_old[:-translation[0] , -translation[1]:];    
+    if translation[0] < 0  and translation[1] > 0:  im_new[: translation[0] ,  translation[1]:] = im_old[ -translation[0]:,:-translation[1] ];   
+    if translation[0] > 0  and translation[1] > 0:  im_new[  translation[0]:,  translation[1]:] = im_old[:-translation[0] ,:-translation[1] ];
        
     return(im_new)
     
