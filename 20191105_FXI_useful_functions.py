@@ -93,8 +93,9 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_dist
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
-    # Now actually do the  shift
-    Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    # Now actually do the  shift.  Use -translation to put it back to where it should be (aligned with im1)
+    Mn_im2_buffered_aligned = shift_image_integer(Mn_im2_buffered, -translation1)
+    #Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
     Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.1234567890123456
     Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
@@ -109,8 +110,10 @@ def internally_align_h5_file(Mn_filename,cc_search_distance):    #cc_search_dist
     Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
     # Now actually do the  shift
-    Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-    Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    Cu_im1_buffered_aligned = shift_image_integer(Cu_im1_buffered, -translation2)
+    Cu_im2_buffered_aligned = shift_image_integer(Cu_im2_buffered, -translation3)
+    #Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    #Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
 
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
     Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.1234567890123456
@@ -185,10 +188,14 @@ def align_processed_images_time_series(file_numbers,cc_search_distance):  #filen
         print(translation)
         
         # Now actually shift the images to be in alignment
-        im2_1 = scipy.ndimage.shift(xanes_raw_ims2[0,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        im2_2 = scipy.ndimage.shift(xanes_raw_ims2[1,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        im2_3 = scipy.ndimage.shift(xanes_raw_ims2[2,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        im2_4 = scipy.ndimage.shift(xanes_raw_ims2[3,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)       
+        im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
+        im2_2 = shift_image_integer(xanes_raw_ims2[1,:,:], -translation2)
+        im2_3 = shift_image_integer(xanes_raw_ims2[2,:,:], -translation3)
+        im2_4 = shift_image_integer(xanes_raw_ims2[3,:,:], -translation4)
+        #im2_1 = scipy.ndimage.shift(xanes_raw_ims2[0,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+        #im2_2 = scipy.ndimage.shift(xanes_raw_ims2[1,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+        #im2_3 = scipy.ndimage.shift(xanes_raw_ims2[2,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+        #im2_4 = scipy.ndimage.shift(xanes_raw_ims2[3,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)       
         temp_matrix = h5object2['xray_images']
         temp_matrix[...] = np.stack((im2_1,im2_2,im2_3,im2_4)) # stupid ass python requires this [...] notation if you want to write data to the h5 file
         #h5object2.create_dataset('xray_images2', shape=(4,im_shape_rows,im_shape_cols), dtype=np.float32, data=np.stack((im2_1,im2_2,im2_3,im2_4)))
@@ -688,10 +695,10 @@ def erc_R(im1_bigger, im2):
 #filename MUST be supplied as a number and must be the Mn raw image file
 def shift_image_integer(im_old,translation):  #filename MUST be supplied as a number and must be the Mn raw image file
     
-    translation = np.int(np.round(translation))
+    translation = [np.int(np.round(-translation[0])), np.int(np.round(-translation[0])), ]
 
     #Create the buffered images
-    im_new = np.ones(im.shape)*0.1234567890123456
+    im_new = np.ones(im_old.shape)*0.1234567890123456
     
     #Now let's actually shift the 2nd Mn image so it's aligned with the 1st Mn image
     if translation[0]== 0  and translation[1]== 0:  im_new[  translation[0]:,  translation[1]:] = im_old[ translation[0]:, translation[1]:];       
