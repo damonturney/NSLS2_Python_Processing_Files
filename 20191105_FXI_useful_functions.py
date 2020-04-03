@@ -621,7 +621,7 @@ def find_image_translation( im1, im2, im1_reduction):
     # Figure out the translation to align im2 to im1
     max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
     translation_y = np.float64(im1_reduction[2] - max_indices[0])  
-    translation_x = np.float64(im1_reduction[0] - max_indices[1]) - ( -1*x_data[0] + 0*x_data[1] + 1*x_data[2] ) / np.sum(x_data) 
+    translation_x = np.float64(im1_reduction[0] - max_indices[1]) 
 
     ## Now do subpixel resolution
     y_data = np.float64(cc_image[max_indices[0]-1 : max_indices[0]+2, max_indices[1]                      ])
