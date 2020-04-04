@@ -70,7 +70,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 ### Workflow ##############################################
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
-# 2) Run align_processed_images_time_series([34567,34569],[50,350,200,200], []) on each of the processed_images...h5 fiels created in step 1.  The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) 
 ############################################################
     
@@ -186,7 +186,7 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         print(translation3, error3)
         print(translation4, error4)
         print(translation)
-        h5object2.create_dataset('translations_time_series', shape=(2), dtype=np.float64, data=translation)
+        h5object2.create_dataset('translations_time_series', shape=(2,), dtype=np.float64, data=translation)
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
