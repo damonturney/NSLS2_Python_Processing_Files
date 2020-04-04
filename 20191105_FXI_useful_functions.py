@@ -186,7 +186,7 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         print(translation3, error3)
         print(translation4, error4)
         print(translation)
-        h5object_new.create_dataset('translations_time_series', shape=(2), dtype=np.float64, data=translation)
+        h5object2.create_dataset('translations_time_series', shape=(2), dtype=np.float64, data=translation)
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
