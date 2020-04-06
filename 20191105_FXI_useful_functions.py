@@ -299,7 +299,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     fig_han = plt.figure(figsize=(figure_width, figure_height ))
     closest_index_txm=0
     global closest_index_txm_previous
-    closest_index_txm_previous = 0
+    closest_index_txm_previous = -1
     im=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
     debuffer = calculate_image_debuffer_multiple_files(txm_file_numbers)
     im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
