@@ -306,9 +306,9 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
-    im[-40:-20,-175:-48]=1.0
+    im[-40:-20,-225:-98]=1.0
     im_axes.imshow(im,cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
-    plt.text(im.shape[1]-140,im.shape[0]-23,'5 um',fontsize=7.8)
+    plt.text(im.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
     print('displaying img: ' + str(txm_file_numbers[0]))
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
@@ -333,8 +333,8 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
             closest_index_txm_previous=closest_index_txm
             image=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
             image=image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #image   = read_image_from_processed_file(txm_file_numbers[closest_index_txm],'Mn_thickness')
-            image[-40:-20,-175:-48]=1.0
-            plt.text(image.shape[1]-141,im.shape[0]-22,'5 um',fontsize=7.8)
+            image[-40:-20,-225:-98]=1.0
+            plt.text(image.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
             im_axes.imshow(image, cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
             #authorship_label_axis.text(0,0,'by D.E. Turney',size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
             print('displaying img: ' + str(txm_file_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
