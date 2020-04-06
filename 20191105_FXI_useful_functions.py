@@ -345,7 +345,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
-    animation_handle.save(output_filename, writer=writer)
+    animation_handle.save(output_filename, writer=writer, bitrate=5000)
 
 
 
