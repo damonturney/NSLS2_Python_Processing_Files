@@ -71,7 +71,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ### Workflow ##############################################
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
-# 3) 
+# 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
 
@@ -155,25 +155,15 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
-        
-        # This info will be use several times
-        im_shape_rows = xanes_raw_ims1.shape[1]
-        im_shape_cols = xanes_raw_ims1.shape[2]
-        im_half_rows = np.int(im_shape_rows/2)
-        im_half_cols = np.int(im_shape_cols/2)
-
+                
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
-        debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
-        debuffer[0] = int(np.max([ np.max(np.where(xanes_raw_ims1[:,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[1])    ,  np.max(np.where(xanes_raw_ims2[:,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[1])     ]) )
-        debuffer[1] = int(np.min([ np.min(np.where(xanes_raw_ims1[:,  im_half_rows ,  im_half_cols:]==0.1234567890123456)[1])    ,  np.min(np.where(xanes_raw_ims2[:,  im_half_rows ,  im_half_cols:]==0.1234567890123456)[1])     ])  +  im_half_cols )
-        debuffer[2] = int(np.max([ np.max(np.where(xanes_raw_ims1[:,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[1])    ,  np.max(np.where(xanes_raw_ims2[:,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[1])     ]) )
-        debuffer[3] = int(np.max([ np.max(np.where(xanes_raw_ims1[:,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[1])    ,  np.max(np.where(xanes_raw_ims2[:,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[1])     ])  +  im_half_rows )
+        debuffer = calculate_image_debuffer(np.concatenate((xanes_raw_ims1,xanes_raw_ims2),axis=0))
         
         #Find out how much translation to move each image
-        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[0,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
-        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[1,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
-        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[2,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
-        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , xanes_raw_ims2[3,debuffer[0]+1:debuffer[1],debuffer[2]+1:debuffer[3]] , im2_cropping, cc_search_distance)
+        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
 
         # Calculate the averaged shift to use (weighted by how much error ocurred on each calculation of the images translation)
         sum_inverse_errors = 1/error1 + 1/error2 + 1/error3 + 1/error4
@@ -279,18 +269,13 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
 
 
 
-
-def make_movie_34565_to_34875(file_numbers,biologic_file, location=1):
-    if location == 1:
-        file_numbers = file_numbers
-        
-    if location == 2:
-        file_numbers = file_numbers + 0.0001
+#     image_used_for_plot ='Mn_raw_im1' or 'optical_thickness_Bi' et cetera
+def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
         
     # Read timestamps of the images, The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)
     datetime_array_xanes = np.array([])
     timestamp_array_xanes = np.array([])
-    for i in file_numbers:
+    for i in txm_file_numbers:
         datetime_xanes_file  = datetime.datetime.fromtimestamp(read_FXI_xanes_timestamp_datetime_datetime(i))
         timestamp_xanes_file = datetime_xanes_file.timestamp()
         datetime_array_xanes  = np.concatenate( (datetime_array_xanes , np.array([datetime_xanes_file]) ) )
@@ -305,54 +290,66 @@ def make_movie_34565_to_34875(file_numbers,biologic_file, location=1):
         fileobject.readline()       
     thirteenth_line=fileobject.readline()
     fileobject.close()
-    biologic_data=pandas.read_csv(data_directory+'Biologic_Files/20191107_Cu-Bi-Birnessite_37NaOH_more_loading_C04.mpt', sep='\t', skiprows=int(second_line[18:21])-1)
+    biologic_data=pandas.read_csv(data_directory+'Biologic_Files/'+biologic_file, sep='\t', skiprows=int(second_line[18:21])-1)
     biologic_start_time=datetime.datetime.strptime(thirteenth_line[25:44],'%m/%d/%Y %H:%M:%S')
     
-    # Create the static plot axes
-    fig_han, axs_han = plt.subplots(3,1)
-    fig_han.set_size_inches(3.5,4.5)
-    big_axes_han=plt.subplot2grid((3,1),(0,0),colspan=1,rowspan=2)
-    big_axes_han.set_ylabel('y-direction (micron)')
-    #big_axes_han.set_ylim([0,40])
-    big_axes_han.set_xlabel('x-direction (micron)')
-    #big_axes_han.set_xlim([0,40])
-    temp=read_image_from_processed_file(file_numbers[0],'xray_images')
-    im=temp[0,:,:]
-    #im=read_image_from_processed_file(file_numbers[0],'Mn_thickness')
-    big_axes_han.imshow(im,cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=-0.001, vmax=0.006)
-    print('displaying img: ' + str(file_numbers[0]))
-    plt.subplots_adjust(top=0.90, bottom=0.1, hspace=0.35, wspace=0.01)
-    small_axes_han=plt.subplot2grid((3,1),(2,0))
-    small_axes_han.set_xlabel('Electrode Voltage (V)')
-    small_axes_han.set_ylabel('Current (mA)')
-    plt.plot(biologic_data['Ewe/V'].values[0:1500],biologic_data['<I>/mA'].values[0:1500])
-    scatter_han = small_axes_han.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0],c='r',s=25)
-       
+    # Create the first plot (figure layout, axes, et cetera)
+    figure_width = 10    #figsize=(       height             ,   width     )
+    figure_height = 1080/1280*figure_width/1.5 
+    fig_han = plt.figure(figsize=(figure_width, figure_height ))
+    closest_index_txm=0
+    global closest_index_txm_previous
+    closest_index_txm_previous = 0
+    im=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
+    debuffer = calculate_image_debuffer_multiple_files(txm_file_numbers)
+    im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
+    # The new axis size:left, bottom,         width                                    ,   height
+    im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
+    im_axes.set_axis_off()
+    im[-40:-20,-175:-48]=1.0
+    im_axes.imshow(im,cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
+    plt.text(im.shape[1]-140,im.shape[0]-23,'5 um',fontsize=7.8)
+    print('displaying img: ' + str(txm_file_numbers[0]))
+    # The new axis size:                left                                           ,   bottom,                               width,                             , height
+    iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
+    iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
+    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9)
+    iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 8)    
+    iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000,zorder=0)
+    scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
+    
+    #authorship label
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.00,   0.005,  0.2 ,    0.02])
+    authorship_label_axis.set_axis_off()
+    authorship_label_axis.text(0,0,'by D.E. Turney',alpha=0.55,size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
+   
     def change_imshow(frame_num):
-        time_per_iteration = 20  #One frame per 20 seconds
-        frame_time = biologic_start_time + datetime.timedelta(seconds = frame_num*time_per_iteration) - datetime.timedelta(minutes = 3) #The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)   
-        closest_index=abs(biologic_data['time/s'].values - frame_num*time_per_iteration).argmin() #One frame per 20 seconds
-        scatter_han.set_offsets([biologic_data['Ewe/V'].values[closest_index],biologic_data['<I>/mA'].values[closest_index]])
-        if frame_num % 6 == 1:  
-            closest_index=abs(timestamp_array_xanes - np.float64(frame_time.timestamp())).argmin()
-            temp=read_image_from_processed_file(file_numbers[closest_index],'xray_images')
-            image=temp[0,:,:]
-            #image   = read_image_from_processed_file(file_numbers[closest_index],'Mn_thickness')
-            big_axes_han.imshow(image,cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=-0.001, vmax=0.8)
-            print('displaying img: ' + str(file_numbers[closest_index]))
-            print('elapsed time: ' + str(frame_num*time_per_iteration))
+        global closest_index_txm_previous
+        frame_time = biologic_start_time + datetime.timedelta(seconds = frame_num*seconds_per_movie_frame) - datetime.timedelta(minutes = 3) #The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)   
+        closest_index_biologic=abs(biologic_data['time/s'].values - frame_num*seconds_per_movie_frame).argmin() #One frame per 20 seconds
+        scatter_han.set_offsets([biologic_data['Ewe/V'].values[closest_index_biologic],biologic_data['<I>/mA'].values[closest_index_biologic]*1000])
+        closest_index_txm=abs(timestamp_array_xanes - np.float64(frame_time.timestamp())).argmin()
+        if closest_index_txm != closest_index_txm_previous:
+            closest_index_txm_previous=closest_index_txm
+            image=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
+            image=image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #image   = read_image_from_processed_file(txm_file_numbers[closest_index_txm],'Mn_thickness')
+            image[-40:-20,-175:-48]=1.0
+            plt.text(image.shape[1]-141,im.shape[0]-22,'5 um',fontsize=7.8)
+            im_axes.imshow(image, cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
+            #authorship_label_axis.text(0,0,'by D.E. Turney',size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
+            print('displaying img: ' + str(txm_file_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
 
-            #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=0.235, vmax=0.94)
+        #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=0.235, vmax=0.94)
         
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
-    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(100), blit=False, interval=100, repeat=False)
+    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
-    animation_handle.save('im.mp4', writer=writer)
+    animation_handle.save(output_filename, writer=writer)
 
 
 
-def make_movie_just_TXM_raw(file_numbers):
+def make_movie_just_images(file_numbers, movie_filename):
         
     # Create the static plot axes
     ims=read_image_from_processed_file(file_numbers[0],'xray_images')
@@ -366,10 +363,10 @@ def make_movie_just_TXM_raw(file_numbers):
 
         
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
-    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(20), blit=False, interval=100, repeat=False)
+    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(len(file_numbers)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
-    animation_handle.save('im.mp4', writer=writer)
+    animation_handle.save(movie_filename, writer=writer)
 
 
 
@@ -526,15 +523,19 @@ def read_image_from_processed_file(filename,which_image='all'):
         return(xray_images)
 
     if which_image == 'Mn_raw_im1':
+        xray_images = np.array(h5object['xray_images'])
         return(xray_images[0,:,:])
 
     if which_image == 'Mn_raw_im2':
+        xray_images = np.array(h5object['xray_images'])
         return(xray_images[1,:,:])
 
     if which_image == 'Cu_raw_im1':
+        xray_images = np.array(h5object['xray_images'])
         return(xray_images[2,:,:])
 
     if which_image == 'Cu_raw_im2':
+        xray_images = np.array(h5object['xray_images'])
         return(xray_images[3,:,:])
 
     if which_image == 'all_thickness':
@@ -665,7 +666,7 @@ def erc_R(im1, im2_orig, im2_cropping, cc_search_distance):
     variance_im2=np.var(im2);
     length_im2=len(im2[:]);
     
-    R   = np.ones((winsize1[0]-winsize2[0]+1,winsize1[1]-winsize2[1]+1))*0.012345678901
+    R   = np.ones((winsize1[0]-winsize2[0]+1,winsize1[1]-winsize2[1]+1))*0.12345678901
     im1_subwindow = np.ones(im2.shape)
     
     for m in range(im2_cropping[0]-cc_search_distance[0],im2_cropping[0]+1+cc_search_distance[1],3):
@@ -679,7 +680,7 @@ def erc_R(im1, im2_orig, im2_cropping, cc_search_distance):
     focused_indices=[]
     for m in range(0,winsize1[1]-winsize2[1]+1):
         for n in range(0,winsize1[0]-winsize2[0]+1):
-            if abs(m - max_indices[1])<7 and abs(n - max_indices[0])<7 and R[n,m]==0.012345678901:
+            if abs(m - max_indices[1])<7 and abs(n - max_indices[0])<7 and R[n,m]==0.12345678901:
                 focused_indices.append([n,m])
     
     for i in range(0,len(focused_indices)):
@@ -717,334 +718,59 @@ def shift_image_integer(im_old,translation):  #filename MUST be supplied as a nu
 
 
     
+def calculate_image_debuffer(ims):
+    debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
+    debuffer_all_images=[100000,0,100000,0] 
+    if ims.ndim == 2: ims=np.stack((ims,ims))  #In case the user gives a single image
+    im_shape_rows = ims.shape[1]
+    im_shape_cols = ims.shape[2]
+    im_half_rows = np.int(im_shape_rows/2)
+    im_half_cols = np.int(im_shape_cols/2)
+    for i in range(ims.shape[0]):
+        debuffer[0] = int( np.max(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)) )
+        debuffer[1] = int( np.min(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456)) ) + im_half_cols
+        debuffer[2] = int( np.max(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)) )
+        debuffer[3] = int( np.min(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456)) ) + im_half_rows
+        if debuffer[0]<debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
+        if debuffer[1]>debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
+        if debuffer[2]<debuffer_all_images[2]: debuffer_all_images[2]=debuffer[2]
+        if debuffer[3]>debuffer_all_images[3]: debuffer_all_images[3]=debuffer[3]
+        
+    return(debuffer_all_images)
     
     
-
-
-####### MATLAB CODE FOR MAKING MOVIES FROM MESSINGER LAB MICROSCOPE COMPUTER USED BY BRENDAN ##############
-#= (biologic_start_time - scan_start_time).total_seconds()
-#
-#
-#print(f'{time.monotonic() - t0}')
-#
-#A=xlsread('C:\Users\Maccor\Desktop\Damon\movie_collection\movie_20181129\Data_For_Matlab_1stRun.xlsx');
-#images_dir='images_1stRun';
-#fig_han=figure('Position',[1.0000    1.0000  935.2000  781.6000]);  %[x0 y0 deltax deltay ] [646.6000 46.6000 887.2000 735.2000] %[973.8000 46.6000 560.0000 460.8000]);#
-#%ax3_han = axes('Position',[0.08 0.591 0.957 0.14]);
-#ax1_han = axes('Position',[0.0723    0.06744    0.9002    0.2571]); %[x0 y0 deltax deltay ]
-#A(:,1)=A(:,1)-0.5; %shift cell voltage to be w.r.t. Hg/HgO (use 0.5 if converting from a Bi2O3 counter)
-#A(:,2)=A(:,2)*1000; 
-#A(:,4)=-A(:,4)-0.1; %shift Sync voltage to be w.r.t. Hg/HgO (use 0.1 if converting from a Cu wire).  The Sync voltage is measured between reference electrode and working electrode.
-#plot_han=plot(A(:,4),A(:,2),'r',A(:,1),A(:,2),'g');  %plot current vs voltage
-#ylim([-20 50])
-#xlim([-1.0 0.55])
-#set(get(ax1_han, 'XLabel'), 'string', 'Voltage w.r.t. Hg/HgO (V)')
-#set(get(ax1_han, 'YLabel'), 'string', 'Current (mA)')
-#%set(get(ax1_han, 'YLabel'), 'Rotation', 0)
-#%set(get(ax1_han, 'YLabel'), 'Position', [-2.5 1.5 1])
-#set(ax1_han,'XColor',[0 0 0])
-#set(ax1_han,'YColor',[0 0 0])
-#
-#ax2_han = axes('Position',[0.11 0.33 0.85 0.68],'Visible','off');%[x0 y0 deltax deltay ]
-#photos=dir([images_dir '/*.png']);
-#for i = 1:length(photos)
-#    photos_elapsedtime(i)=(datenum(photos(i).name(1:14),'yyyymmddHHMMSS')-datenum(photos(1).name(1:14),'yyyymmddHHMMSS'))*24*3600;
-#end
-#movie_times=0:10:A(end,3);
-#num_frames=length(A(:,3));
-#movie_frames(length(movie_times))= struct('cdata',[],'colormap',[]);
-#for i=1:length(movie_times)
-#    axes(ax2_han);
-#    [c index] = min(abs(photos_elapsedtime-movie_times(i)));
-#    image=imread([images_dir '/' photos(index).name]);
-#    imshow(image(1:3400,:,:));   %(yrange, xrange, colorrange)
-#    axes(ax1_han);
-#    [c index] = min(abs(A(:,3)-movie_times(i)));
-#    line_han=scatter(A(index,1),A(index,2),15,'r','filled');
-#    movie_frames(i)=getframe(gcf);
-#    line_han.delete;
-#end
-#v = VideoWriter([images_dir '.mp4'],'MPEG-4');
-#v.FrameRate=15;
-#open(v);
-#writeVideo(v,movie_frames);
-#close(v);
-#close all
-#clear all
-#%movie(fig_han,movie_frames,2)
-#
-
-
-
-#  Andy's code
-#    # Save the files
-#    # Check if a folder exists
-#    new_folder = working_directory + filename[:-3] + '/'
-#    if (not os.path.isdir(new_folder)):
-#        try:
-#            os.mkdir(new_folder)
-#        except e as Exception:
-#            print('Error creating directory.')
-#            print(e)
-#            quit()
-#    
-#    # Save the files
-#    skimage.io.imsave(new_folder+'xanes.tif', I)
+def calculate_image_debuffer_multiple_files(file_numbers):
+    debuffer_multi_file = [100000,0,100000,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
     
+    for i in range(0,len(file_numbers)):
+        filename="%.4f" % file_numbers[i]
+        filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+        h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')        
+        xanes_raw_ims = np.array(h5object['xray_images'])
+        h5object.close()
+        debuffer = calculate_image_debuffer(xanes_raw_ims)
+        if debuffer[0]<debuffer_multi_file[0]: debuffer_multi_file[0]=debuffer[0]
+        if debuffer[1]>debuffer_multi_file[1]: debuffer_multi_file[1]=debuffer[1]
+        if debuffer[2]<debuffer_multi_file[2]: debuffer_multi_file[2]=debuffer[2]
+        if debuffer[3]>debuffer_multi_file[3]: debuffer_multi_file[3]=debuffer[3]
+        
+    return(debuffer_multi_file)
+
     
-#    Great data Robin Pelc !  Thnx.  That data partly changes my mind, and makes me partly agree with all ya'll on this topic.
-#
-#The WaPo study is scientifically inconclusive because it 
-#
-#Combining your WaPo data with the data that Hillary got THE SAME number of votes in 2016 as Obama (a man) got in 2012, makes me think the sexism in Democratic voters exists but only makes a .  So I guess Hillary would have won the 2016 primary with greater excess if she were a man.  And she likely would have gained a few million more votes in the general election against Trump if she were a man.
-#
-#Kevin Yelenik  I totally agree the world (on average) is sexist. I wasn't convinced yet that the Democratic Party was actually picking and choosing candidates with sexist fingerprints, but now I'm convinced that there is a slight effect from sexism, thanks.  
-#
-#
-#
-# 
-    
-#    
-#    
-#    
-#    
-#        #Now search for a lower sum-of-square-error by pairwise swaping of thickness (via all pairwise combinatorics) 
-#    for m in range(0,ims[0,:,:].shape[0]):
-#        if np.mod(m,10)==0: sys.stdout.write('\rMaximum Decent, Row: '+str(m))
-#        sys.stdout.flush()
-#        for n in range(0,ims[0,:,:].shape[1]):
-#            if m==300 and n==900:
-#                print('hi')
-#            for j in range(0,1):
-#                baseline_sum_square_error     =       calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                test_sum_squares = pairwise_thicknessswapping_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)                         
-#                sum_square_error_linear_slope = test_sum_squares - baseline_sum_square_error
-#                max_pair = np.argmax(abs(sum_square_error_linear_slope))
-#                
-#                if max_pair==0:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[0])
-#                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[0])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
-#                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
-#                if max_pair==1:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[1])
-#                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[1])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
-#                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
-#                if max_pair==2:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[2])
-#                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[2])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Mn[m,n]=optical_thickness_Mn_test
-#                            optical_thickness_El[m,n]=optical_thickness_El_test
-#                if max_pair==3:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[3])
-#                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[3])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
-#                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
-#                if max_pair==4:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Cu_test = optical_thickness_Cu[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[4])
-#                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[4])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Cu[m,n]=optical_thickness_Cu_test
-#                            optical_thickness_El[m,n]=optical_thickness_El_test
-#                if max_pair==5:
-#                    previous_sum_square_errors = baseline_sum_square_error
-#                    sum_square_errors = baseline_sum_square_error
-#                    while(sum_square_errors<=previous_sum_square_errors):
-#                        previous_sum_square_errors = sum_square_errors
-#                        optical_thickness_Bi_test = optical_thickness_Bi[m,n] - 0.0001*np.sign(sum_square_error_linear_slope[5])
-#                        optical_thickness_El_test = optical_thickness_El[m,n] + 0.0001*np.sign(sum_square_error_linear_slope[5])
-#                        sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-#                        if sum_square_errors<=previous_sum_square_errors:
-#                            optical_thickness_Bi[m,n]=optical_thickness_Bi_test
-#                            optical_thickness_El[m,n]=optical_thickness_El_test
-#                            
-#                            
+   
 
 
-##Now search for a lower sum-of-square-error by pairwise swaping of thickness (via all pairwise combinatorics) 
-#for m in range(0,ims[0,:,:].shape[0]):
-#    if np.mod(m,10)==0: sys.stdout.write('\rMaximum Decent, Row: '+str(m))
-#    sys.stdout.flush()
-#    for n in range(0,ims[0,:,:].shape[1]):
-#        ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
-#        if m==300 and n==900:
-#            print('hi')
-#        for j in range(0,10):
-#            baseline_sum_square_error = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#            test_matrix_sum_square_errors =       dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])                         
-#            sum_square_error_linear_slope = np.array([test_matrix_sum_square_errors[1] - test_matrix_sum_square_errors[0] , test_matrix_sum_square_errors[3] - test_matrix_sum_square_errors[2] , test_matrix_sum_square_errors[5] - test_matrix_sum_square_errors[4] , test_matrix_sum_square_errors[7] - test_matrix_sum_square_errors[6] ] )
-#            max_element = np.argmax(abs(sum_square_error_linear_slope))
-#            
-#            if max_element==0:
-#                previous_sum_square_errors = baseline_sum_square_error
-#                sum_square_errors_test = baseline_sum_square_error
-#                while(sum_square_errors_test<=previous_sum_square_errors):
-#                    previous_sum_square_errors = sum_square_errors_test
-#                    optical_thickness_Mn_test = optical_thickness_Mn[m,n] - 0.00001*np.sign(sum_square_error_linear_slope[0])
-#                    sum_square_errors_test = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn_test,optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#                    if sum_square_errors_test<=previous_sum_square_errors:
-#                        optical_thickness_Mn[m,n]=optical_thickness_Mn_test
-#            if max_element==1:
-#                previous_sum_square_errors = baseline_sum_square_error
-#                sum_square_errors_test = baseline_sum_square_error
-#                while(sum_square_errors_test<=previous_sum_square_errors):
-#                    previous_sum_square_errors = sum_square_errors_test
-#                    optical_thickness_Cu_test = optical_thickness_Cu[m,n] - 0.00001*np.sign(sum_square_error_linear_slope[0])
-#                    sum_square_errors_test = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu_test,optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#                    if sum_square_errors_test<=previous_sum_square_errors:
-#                        optical_thickness_Cu[m,n]=optical_thickness_Cu_test
-#            if max_element==2:
-#                previous_sum_square_errors = baseline_sum_square_error
-#                sum_square_errors_test = baseline_sum_square_error
-#                while(sum_square_errors_test<=previous_sum_square_errors):
-#                    previous_sum_square_errors = sum_square_errors_test
-#                    optical_thickness_Bi_test = optical_thickness_Bi[m,n] - 0.00001*np.sign(sum_square_error_linear_slope[0])
-#                    sum_square_errors_test = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi_test,optical_thickness_C[m,n],optical_thickness_El[m,n])
-#                    if sum_square_errors_test<=previous_sum_square_errors:
-#                        optical_thickness_Bi[m,n]=optical_thickness_Bi_test
-#            if max_element==3:
-#                previous_sum_square_errors = baseline_sum_square_error
-#                sum_square_errors_test = baseline_sum_square_error
-#                while(sum_square_errors_test<=previous_sum_square_errors):
-#                    previous_sum_square_errors = sum_square_errors_test
-#                    optical_thickness_El_test = optical_thickness_El[m,n] - 0.00001*np.sign(sum_square_error_linear_slope[0])
-#                    sum_square_errors_test = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El_test)
-#                    if sum_square_errors_test<=previous_sum_square_errors:
-#                        optical_thickness_El[m,n]=optical_thickness_El_test
-#
-       
-    
-#        total_thickness = total_thickness + 0.0005
-#
-#        b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-#        b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-#        b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-#        
-#        temp = np.linalg.solve(A, b)
-#        optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
-#        optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
-#        optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
-#        optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] + optical_thickness_Cu[m,n] + optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
-#        sum_square_errors2 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#
-#        if sum_square_errors2 < sum_square_errors1:
-#            sum_square_errors_previous = sum_square_errors2
-#            sum_square_errors_latest = sum_square_errors2
-#            while(sum_square_errors_latest <= sum_square_errors_previous):
-#                total_thickness = total_thickness + 0.0005
-#    
-#                b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-#                b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-#                b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-#                
-#                temp = np.linalg.solve(A, b)
-#                optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
-#                optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
-#                optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
-#                optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] + optical_thickness_Cu[m,n] + optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
-#                sum_square_errors_previous = sum_square_errors_latest
-#                sum_square_errors_latest = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#                print(total_thickness)
-#                if sum_square_errors_latest > sum_square_errors_previous:
-#                    total_thickness = total_thickness - 0.0005
-#                    
-#        else:
-#            total_thickness = total_thickness - 0.0005
-#            sum_square_errors_previous = sum_square_errors1
-#            sum_square_errors_latest = sum_square_errors1
-#            while(sum_square_errors_latest <= sum_square_errors_previous):
-#                total_thickness = total_thickness - 0.0005
-#    
-#                b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-#                b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-#                b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-#                
-#                temp = np.linalg.solve(A, b)
-#                optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
-#                optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
-#                optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
-#                optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] + optical_thickness_Cu[m,n] + optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
-#                sum_square_errors_previous = sum_square_errors_latest
-#                sum_square_errors_latest = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-#                if sum_square_errors_latest > sum_square_errors_previous:
-#                    total_thickness = total_thickness + 0.0005
-#
-#                #Now that we know the best thickness to use, let's do the final calculations for the final answer
-#                b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-#                b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-#                b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-#                
-#                temp = np.linalg.solve(A, b)
-#                optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
-#                optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
-#                optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
-#                optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] + optical_thickness_Cu[m,n] + optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
-#                sum_square_errors = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
+def combine_more_loading1_with_more_loading2():
+    # Read Biologic Potentiostat Data
+    fileobject=open(data_directory+'Biologic_Files/'+biologic_file,'r',errors='ignore')
+    fileobject.seek(0)
+    fileobject.readline()
+    second_line=fileobject.readline()
+    for i in range(1,11):
+        fileobject.readline()       
+    thirteenth_line=fileobject.readline()
+    fileobject.close()
+    biologic_data=pandas.read_csv(data_directory+'Biologic_Files/'+biologic_file, sep='\t', skiprows=int(second_line[18:21])-1)
+    biologic_start_time=datetime.datetime.strptime(thirteenth_line[25:44],'%m/%d/%Y %H:%M:%S')
 
 
-
-
-#    # Calculate how much shift will align the 1st and 2nd Cu images with the 1st Mn image
-#    beam_energies_Cu, Cu_ims = read_FXI_xanes_images(Cu_filename);
-#    Cu_translation = find_image_translation(Cu_ims[0,:,:],Cu_ims[1,:,:])  #Cu_trans  is the translation (pixel shift) of Cu image 2 wrt Cu image 1
-#    Cu2_translation = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:]) #Cu2_trans is the translation (pixel shift) of Cu image 2 wrt Mn image 1
-#    Cu1_translation = Cu2_translation - Cu_translation                            #Cu1_translation is the translation (pixel shift) of Cu image 1 wrt Mn image 1
-#    Cu_ims_buffered = np.zeros((2, Cu_ims.shape[1] + 2*buffer_edges, Cu_ims.shape[2] + 2*buffer_edges), dtype=np.float32) + np.min(Cu_ims) #I add np.min(Cu_ims) so that np.log doesn't create an error
-#    Cu_ims_buffered[0,:,:] = np.pad(Cu_ims[0,:,:], buffer_edges)
-#    Cu_ims_buffered[1,:,:] = np.pad(Cu_ims[1,:,:], buffer_edges)
-#    Cu_im1_buffered_aligned = np.zeros(Cu_ims_buffered[0,:,:].shape, dtype=np.float32) + np.min(Cu_ims) #add np.min(Cu_ims) so that np.log doesn't create an error
-#    Cu_im2_buffered_aligned = np.zeros(Cu_ims_buffered[0,:,:].shape, dtype=np.float32) + np.min(Cu_ims) #add np.min(Cu_ims) so that np.log doesn't create an error 
-#     
-#    #Now let's actually shift the 2nd Cu image so it's aligned with the 1st Mn image
-#    if Cu2_translation[0]== 0  and Cu2_translation[1]== 0:  Cu_im2_buffered_aligned[  Cu2_translation[0]:,  Cu2_translation[1]:] = Cu_ims_buffered[1, Cu2_translation[0]:, Cu2_translation[1]:];       
-#    if Cu2_translation[0] > 0  and Cu2_translation[1] > 0:  Cu_im2_buffered_aligned[:-Cu2_translation[0] ,:-Cu2_translation[1] ] = Cu_ims_buffered[1, Cu2_translation[0]:, Cu2_translation[1]:];       
-#    if Cu2_translation[0] < 0  and Cu2_translation[1]== 0:  Cu_im2_buffered_aligned[ -Cu2_translation[0]:,  Cu2_translation[1]:] = Cu_ims_buffered[1,:Cu2_translation[0],  Cu2_translation[1]:];    
-#    if Cu2_translation[0] < 0  and Cu2_translation[1] > 0:  Cu_im2_buffered_aligned[ -Cu2_translation[0]:,:-Cu2_translation[1] ] = Cu_ims_buffered[1,:Cu2_translation[0],  Cu2_translation[1]:];    
-#    if Cu2_translation[0]== 0  and Cu2_translation[1] < 0:  Cu_im2_buffered_aligned[  Cu2_translation[0]:, -Cu2_translation[1]:] = Cu_ims_buffered[1, Cu2_translation[0]:,:Cu2_translation[1] ];   
-#    if Cu2_translation[0] > 0  and Cu2_translation[1] < 0:  Cu_im2_buffered_aligned[:-Cu2_translation[0] , -Cu2_translation[1]:] = Cu_ims_buffered[1, Cu2_translation[0]:,:Cu2_translation[1] ];   
-#    if Cu2_translation[0] < 0  and Cu2_translation[1] < 0:  Cu_im2_buffered_aligned[ -Cu2_translation[0]:, -Cu2_translation[1]:] = Cu_ims_buffered[1,:Cu2_translation[0], :Cu2_translation[1] ];
-#        
-#    #Now let's actually shift the 1st Cu image so it's aligned with the 1st Mn image
-#    if Cu1_translation[0]== 0  and Cu1_translation[1]== 0:  Cu_im1_buffered_aligned[  Cu1_translation[0]:,  Cu1_translation[1]:] = Cu_ims_buffered[0, Cu1_translation[0]:, Cu1_translation[1]:];       
-#    if Cu1_translation[0] > 0  and Cu1_translation[1] > 0:  Cu_im1_buffered_aligned[:-Cu1_translation[0] ,:-Cu1_translation[1] ] = Cu_ims_buffered[0, Cu1_translation[0]:, Cu1_translation[1]:];       
-#    if Cu1_translation[0] < 0  and Cu1_translation[1]== 0:  Cu_im1_buffered_aligned[ -Cu1_translation[0]:,  Cu1_translation[1]:] = Cu_ims_buffered[0,:Cu1_translation[0],  Cu1_translation[1]:];    
-#    if Cu1_translation[0] < 0  and Cu1_translation[1] > 0:  Cu_im1_buffered_aligned[ -Cu1_translation[0]:,:-Cu1_translation[1] ] = Cu_ims_buffered[0,:Cu1_translation[0],  Cu1_translation[1]:];    
-#    if Cu1_translation[0]== 0  and Cu1_translation[1] < 0:  Cu_im1_buffered_aligned[  Cu1_translation[0]:, -Cu1_translation[1]:] = Cu_ims_buffered[0, Cu1_translation[0]:,:Cu1_translation[1] ];   
-#    if Cu1_translation[0] > 0  and Cu1_translation[1] < 0:  Cu_im1_buffered_aligned[:-Cu1_translation[0] , -Cu1_translation[1]:] = Cu_ims_buffered[0, Cu1_translation[0]:,:Cu1_translation[1] ];   
-#    if Cu1_translation[0] < 0  and Cu1_translation[1] < 0:  Cu_im1_buffered_aligned[ -Cu1_translation[0]:, -Cu1_translation[1]:] = Cu_ims_buffered[0,:Cu1_translation[0], :Cu1_translation[1] ];
-#
-#    Cu_ims_buffered[0,:,:]=Cu_im1_buffered_aligned
-#    Cu_ims_buffered[1,:,:]=Cu_im2_buffered_aligned
-    
-    
-    
