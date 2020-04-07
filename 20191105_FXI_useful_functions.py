@@ -78,17 +78,22 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 #filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
 def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
+    Cu_filename=Mn_filename+1
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
     h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
     h5object_new = h5py.File(data_directory+data_subdirectory+'processed_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
-    h5object_old.copy('scan_time',h5object_new)
     h5object_old.copy('scan_id',  h5object_new)
     h5object_old.copy('note',     h5object_new)
+    scan_start_time_string, scan_time1, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(Mn_filename)
+    scan_start_time_string, scan_time2, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(Cu_filename)
+    h5object_new.create_dataset('scan_time', shape=(1,),   dtype=np.float64, data=np.mean((scan_time1,scan_time2)))
+    
     buffer_edges = 100
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
-    beam_energies_Mn, Mn_ims = read_FXI_xanes_images(Mn_filename); 
+    Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
+    
     translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
@@ -103,7 +108,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    
     Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
     
     ##### Shift the Cu images to be aligned with the 1st Mn image
-    beam_energies_Cu, Cu_ims = read_FXI_xanes_images(Mn_filename+1.0);  
+    Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
     translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
     translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
@@ -130,7 +135,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    
     ims_buffered_aligned = np.stack((Mn_im1_buffered,Mn_im2_buffered_aligned,Cu_im1_buffered_aligned,Cu_im2_buffered_aligned))
     
     # Stuff the data into the h5 file
-    h5object_new.create_dataset('translations_internal', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
+    h5object_new.create_dataset('translations', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
     h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
     h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
     h5object_old.close()
@@ -176,7 +181,9 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         print(translation3, error3)
         print(translation4, error4)
         print(translation)
-        h5object2.create_dataset('translations_time_series', shape=(2,), dtype=np.float64, data=translation)
+        scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations_internal = read_FXI_processed_h5_metadata(file_numbers[i])
+        del h5object2['translations']
+        h5object2.create_dataset('translations', shape=(2,4), dtype=np.float64, data=np.concatenate((translations_internal,translation),axis=0))
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
@@ -276,7 +283,8 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     datetime_array_xanes = np.array([])
     timestamp_array_xanes = np.array([])
     for i in txm_file_numbers:
-        datetime_xanes_file  = datetime.datetime.fromtimestamp(read_FXI_xanes_timestamp_datetime_datetime(i))
+        scan_start_time_string, scan_time, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(i)
+        datetime_xanes_file  = datetime.datetime.fromtimestamp(scantime)
         timestamp_xanes_file = datetime_xanes_file.timestamp()
         datetime_array_xanes  = np.concatenate( (datetime_array_xanes , np.array([datetime_xanes_file]) ) )
         timestamp_array_xanes = np.concatenate( (timestamp_array_xanes , np.array([timestamp_xanes_file]) ) )
@@ -300,14 +308,15 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     closest_index_txm=0
     global closest_index_txm_previous
     closest_index_txm_previous = -1
-    im=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
+    im=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
     debuffer = calculate_image_debuffer_multiple_files(txm_file_numbers)
     im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
     im[-40:-20,-225:-98]=1.0
-    im_axes.imshow(im,cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
+    zmin, zmax = calculate_brightness_contrast(txm_file_numbers, image_used_for_plot, 0.005, 0.995)
+    im_axes.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
     plt.text(im.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
     print('displaying img: ' + str(txm_file_numbers[0]))
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
@@ -331,15 +340,15 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
         closest_index_txm=abs(timestamp_array_xanes - np.float64(frame_time.timestamp())).argmin()
         if closest_index_txm != closest_index_txm_previous:
             closest_index_txm_previous=closest_index_txm
-            image=read_image_from_processed_file(txm_file_numbers[closest_index_txm],image_used_for_plot)
-            image=image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #image   = read_image_from_processed_file(txm_file_numbers[closest_index_txm],'Mn_thickness')
+            image=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
+            image=image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #image   = get_processed_image(txm_file_numbers[closest_index_txm],'Mn_thickness')
             image[-40:-20,-225:-98]=1.0
             plt.text(image.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
-            im_axes.imshow(image, cmap='gray',interpolation='none', vmin=-0.001, vmax=0.8, label=False)
+            im_axes.imshow(image, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
             #authorship_label_axis.text(0,0,'by D.E. Turney',size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
             print('displaying img: ' + str(txm_file_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
 
-        #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=0.235, vmax=0.94)
+        #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', vmin=0.235, vmax=0.94)
         
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
@@ -349,16 +358,41 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
 
 
 
-def make_movie_just_images(file_numbers, movie_filename):
+def make_movie_just_images(file_numbers, image_type_2_show, movie_filename):
+    # Get the first image
+    if image_type_2_show == 'img_bkg1':
+        im=get_raw_image(file_numbers[0],'img_bkg')
+        im=im[0,:,:]
+    if image_type_2_show == 'img_bkg2':
+        im=get_raw_image(file_numbers[0],'img_bkg')
+        im=im[1,:,:]
+    if image_type_2_show == 'img_dark':
+        im=get_raw_image(file_numbers[0],'img_dark')
+        im=im[0,:,:]
+    if image_type_2_show != 'img_bkg1' and movie_filename != 'img_bkg2' and image_type_2_show != 'img_dark':
+        im=get_processed_image(file_numbers[0],image_type_2_show)
         
     # Create the static plot axes
-    ims=read_image_from_processed_file(file_numbers[0],'xray_images')
     fig_han, axs_han = plt.subplots(1)
-    axs_han.imshow(ims[0,:,:],cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=-0.001, vmax=0.006)
+    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.995)
+    axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
        
     def change_imshow(frame_num):
-        ims=read_image_from_processed_file(file_numbers[frame_num],'xray_images')
-        axs_han.imshow(ims[0,:,:],cmap='gray',interpolation='none', extent=[0,40,0,40], vmin=-0.001, vmax=0.8)
+        # Grab the new image
+        if image_type_2_show == 'img_bkg1':
+            im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            im=im[0,:,:]
+        if image_type_2_show == 'img_bkg2':
+            im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            im=im[1,:,:]
+        if image_type_2_show == 'img_dark':
+            im=get_raw_image(file_numbers[frame_num],'img_dark')
+            im=im[0,:,:]
+        if image_type_2_show != 'img_bkg1' and movie_filename != 'img_bkg2' and image_type_2_show != 'img_dark':
+            im=get_processed_image(file_numbers[0],image_type_2_show)
+
+        # Display the image
+        axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
         print('displaying img: ' + str(file_numbers[frame_num]))
 
         
@@ -369,6 +403,31 @@ def make_movie_just_images(file_numbers, movie_filename):
     animation_handle.save(movie_filename, writer=writer)
 
 
+
+
+def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percentile, high_end_percentile):
+    low_end_all_files= np.ones(len(filenumbers))
+    high_end_all_files=np.ones(len(filenumbers))
+    for i in range(len(filenumbers)):
+        if image_2_display == 'img_bkg1' or image_2_display == 'img_bkg2':
+            image = get_raw_image(filenumbers[i],'img_bkg')
+            if image_2_display == 'img_bkg1': image = image[0,:,:]
+            if image_2_display == 'img_bkg2': image = image[1,:,:]
+        if image_2_display == 'img_dark':
+            image = get_raw_image(filenumbers[i],'img_dark')
+            image = image[0,:,:]
+        if image_2_display != 'img_bkg1' and image_2_display != 'img_bkg2' and image_2_display != 'img_dark':
+            image = get_processed_image(filenumbers[i],image_2_display)
+        pdf,bin_edges=np.histogram(image[:],bins=200, range=(np.min(image[:]),np.max(image[:])),density=True)
+        cumulative_probability_distribution = np.cumsum(pdf)
+        cumulative_probability_distribution = cumulative_probability_distribution/cumulative_probability_distribution[-1]
+        bin_centers = bin_edges[0:-1] + (bin_edges[1] - bin_edges[0])/2
+        low_end_all_files[i] =  np.argmin(abs(cumulative_probability_distribution - low_end_percentile))
+        high_end_all_files[i] = np.argmin(abs(cumulative_probability_distribution - high_end_percentile))
+        low_end = np.int(np.median(low_end_all_files))
+        high_end = np.int(np.median(high_end_all_files))
+        
+    return(bin_centers[low_end] , bin_centers[high_end])
 
 
     
@@ -430,35 +489,19 @@ def plot_single_pixel_least_squares_data(filename,row,column):   #filename MUST 
 
 
 
-
-def read_FXI_xanes_timestamp_datetime_datetime(filename):  #filename can be 34567.0103  to denote repeat 01, position 03
-    if type(filename) != str:
-        filename="%.4f" % filename
-        filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    h5object    = h5py.File(data_directory+data_subdirectory+filename, 'r')
-    scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format 
-    h5object.close()
-    return( scan_time)
-
-
-
-
 def read_FXI_raw_h5_metadata(filename):  #filename can be 34567.0103  to denote repeat 01, position 03
     if type(filename) != str:
         filename="%.4f" % filename
         filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object    = h5py.File(data_directory+data_subdirectory+filename, 'r')
-    beam_energy = np.array(h5object['X_eng'])
+    beam_energies = np.array(h5object['X_eng'])
     scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format
     scan_id     = np.array(h5object['scan_id'])
     notes       = np.array(h5object['note'])
     scan_start_time = datetime.datetime.fromtimestamp(scan_time)
     scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
     h5object.close() 
-    if 'translations' in h5object.keys():
-        return(scan_start_time_string, beam_energy, scan_id, notes, translations)
-    else:
-        return(scan_start_time_string, beam_energy, scan_id, notes) 
+    return(scan_start_time_string, scan_time, beam_energies, scan_id, notes) 
 
 
 
@@ -478,27 +521,25 @@ def read_FXI_processed_h5_metadata(filename):  #filename can be 34567.0103  to d
     scan_start_time = datetime.datetime.fromtimestamp(scan_time)
     scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
     h5object.close() 
-    return(scan_start_time_string, beam_energy, scan_id, notes, translations)
+    return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations)
 
 
 
 
 
-def read_FXI_xanes_images(filename):
+def get_raw_image(filename,which_image):
     if type(filename) != str:
         filename="%.4f" % filename
         filename='multipos_2D_xanes_scan2_id_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    print(filename)
     h5object    = h5py.File(data_directory+data_subdirectory+filename, 'r')
-    images      = np.array(h5object['img_xanes'])  
-    beam_energy = np.array(h5object['X_eng'])
+    images      = np.array(h5object[which_image])  
     h5object.close()
-    return(beam_energy, images)
+    return(images)
 
 
 
 
-def read_image_from_processed_file(filename,which_image='all'):
+def get_processed_image(filename,which_image):
     if type(filename) != str:
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
