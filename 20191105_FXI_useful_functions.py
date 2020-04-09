@@ -411,7 +411,7 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
         
     # Create the static plot axes
     fig_han, axs_han = plt.subplots(1)
-    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.995)
+    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.9995)
     axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
        
     def change_imshow(frame_num):
@@ -429,7 +429,6 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
 
         if image_type_2_show == 'img_bkg':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
-            print('hi')
             if ("%.5f" % file_numbers[frame_num])[10] == '0': im=im[0,:,:]
             if ("%.5f" % file_numbers[frame_num])[10] == '1': im=im[1,:,:]
             axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
