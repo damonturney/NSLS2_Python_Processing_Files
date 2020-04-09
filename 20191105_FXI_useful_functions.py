@@ -311,7 +311,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     timestamp_array_xanes = np.array([])
     for i in txm_file_numbers:
         scan_start_time_string, scan_time, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(i)
-        datetime_xanes_file  = datetime.datetime.fromtimestamp(scantime)
+        datetime_xanes_file  = datetime.datetime.fromtimestamp(scan_time)
         timestamp_xanes_file = datetime_xanes_file.timestamp()
         datetime_array_xanes  = np.concatenate( (datetime_array_xanes , np.array([datetime_xanes_file]) ) )
         timestamp_array_xanes = np.concatenate( (timestamp_array_xanes , np.array([timestamp_xanes_file]) ) )
@@ -341,23 +341,35 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
-    im[-40:-20,-225:-98]=1.0
     zmin, zmax = calculate_brightness_contrast(txm_file_numbers, image_used_for_plot, 0.005, 0.995)
+    zmin = 0.0
+    # Make the scale bar
+    im[-85:-65,-175:-48]=1.0
+    im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)
+    # Make the colorbar
+    im[-45:-5,-195:-23]=1.0
+    im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+    im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
+    im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+    im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
+    # Show the whole image
     im_axes.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
-    plt.text(im.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
-    print('displaying img: ' + str(txm_file_numbers[0]))
+    # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
     iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
-    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9)
+    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9,)
     iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 8)    
     iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000,zorder=0)
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
+    # Make the Authorship label Axis
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
+    authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
+    authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis.text(0,0.0,'by D.E. Turney',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    # Show the image number    
+    im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_file_numbers[0]) ,fontsize=7.8)           
     
-    #authorship label
-    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.00,   0.005,  0.2 ,    0.02])
-    authorship_label_axis.set_axis_off()
-    authorship_label_axis.text(0,0,'by D.E. Turney',alpha=0.55,size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
    
     def change_imshow(frame_num):
         global closest_index_txm_previous
@@ -367,12 +379,23 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
         closest_index_txm=abs(timestamp_array_xanes - np.float64(frame_time.timestamp())).argmin()
         if closest_index_txm != closest_index_txm_previous:
             closest_index_txm_previous=closest_index_txm
-            image=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
-            image=image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #image   = get_processed_image(txm_file_numbers[closest_index_txm],'Mn_thickness')
-            image[-40:-20,-225:-98]=1.0
-            plt.text(image.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
-            im_axes.imshow(image, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
-            #authorship_label_axis.text(0,0,'by D.E. Turney',size=7.5,bbox=dict(boxstyle="round",ec='none',fc='w'))
+            im=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
+            im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #im   = get_processed_image(txm_file_numbers[closest_index_txm],'Mn_thickness')
+            # Make the scale bar
+            im[-85:-65,-175:-48]=1.0
+            im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)           
+            #im[-40:-20,-225:-98]=1.0
+            #plt.text(im.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
+            # Make the colorbar
+            im[-45:-5,-195:-23]=1.0
+            im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+            im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
+            im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+            im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
+            # Show the whole image
+            im_axes.imshow(im, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
+            # Show the image number
+            im_id_text.set_text('img: ' + str(txm_file_numbers[closest_index_txm]))           
             print('displaying img: ' + str(txm_file_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
 
         #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', vmin=0.235, vmax=0.94)
@@ -411,7 +434,7 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
         
     # Create the static plot axes
     fig_han, axs_han = plt.subplots(1)
-    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.9995)
+    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.99995)
     axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
        
     def change_imshow(frame_num):
@@ -459,7 +482,7 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
             image = get_raw_image(filenumbers[i],'img_bkg')
             if image_2_display == 'img_bkg1': image = image[0,:,:]
             if image_2_display == 'img_bkg2': image = image[1,:,:]
-            if image_2_display == 'img_bkg':  image = image[0,:,:]            
+            if image_2_display == 'img_bkg':  image = image[:,:,:]            
         if image_2_display == 'img_dark':
             image = get_raw_image(filenumbers[i],'img_dark')
             image = image[0,:,:]
