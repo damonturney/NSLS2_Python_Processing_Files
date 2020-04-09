@@ -69,11 +69,38 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### Workflow ##############################################
+# 0) Create average darkfield image
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
+def make_average_image(file_numbers, which_image, output_filename ):
+    test_im = get_raw_image(file_numbers[0],'img_dark')
+    average_image = test_im*0.0
+    average_series = np.ones(len(file_numbers))
+    std_series = np.ones(len(file_numbers))
+    for i in range(len(file_numbers)):
+        # Grab the image
+        if which_image == 'img_bkg':
+            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=np.mean(im,axis=0)
+        if which_image == 'img_dark':
+            im=get_raw_image(file_numbers[i],'img_dark')
+            im=im[0,:,:]
+        if which_image != 'img_bkg' and which_image != 'img_dark':
+            im=get_processed_image(file_numbers[i], which_image)
+        
+        print('calculating img: ' + str(file_numbers[i]))
+
+        average_image = average_image + im
+        average_series[i] = np.mean(im[:])
+        std_series[i] = np.std(im[:])
+    
+    h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
+    h5object_new.create_dataset('averge_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
+    return(average_series, std_series)
+
 
 
 #filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
@@ -357,8 +384,14 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     animation_handle.save(output_filename, writer=writer)
 
 
-
-def make_movie_just_images(file_numbers, image_type_2_show, movie_filename):
+# file_numbers format: 34565.0000 means the first beam energy, location 0         34565.0001 means the first beam energy, location 1           34565.0101 means the second beam energy, location 1
+# files = np.concatenate((range(34565,34725,2),range(34726,34875,2))) ; files2=np.ones(len(files)*4)
+#for i in range(len(files)):
+#    files2[4*i] = files[i]
+#    files2[4*i+1] = files[i]+0.0001
+#    files2[4*i+2] = files[i]+0.00001
+#    files2[4*i+3] = files[i]+0.00011
+def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
     # Get the first image
     if image_type_2_show == 'img_bkg1':
         im=get_raw_image(file_numbers[0],'img_bkg')
@@ -366,10 +399,14 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename):
     if image_type_2_show == 'img_bkg2':
         im=get_raw_image(file_numbers[0],'img_bkg')
         im=im[1,:,:]
+    if image_type_2_show == 'img_bkg':
+        im=get_raw_image(file_numbers[0],'img_bkg')
+        if ("%.5f" % file_numbers[0])[10] == '0': im=im[0,:,:]
+        if ("%.5f" % file_numbers[0])[10] == '1': im=im[1,:,:]
     if image_type_2_show == 'img_dark':
         im=get_raw_image(file_numbers[0],'img_dark')
         im=im[0,:,:]
-    if image_type_2_show != 'img_bkg1' and movie_filename != 'img_bkg2' and image_type_2_show != 'img_dark':
+    if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
         im=get_processed_image(file_numbers[0],image_type_2_show)
         
     # Create the static plot axes
@@ -378,24 +415,32 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename):
     axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
        
     def change_imshow(frame_num):
-        # Grab the new image
+        print('displaying img: ' + str(file_numbers[frame_num]))
+        # Grab the new image  
         if image_type_2_show == 'img_bkg1':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
             im=im[0,:,:]
+            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+
         if image_type_2_show == 'img_bkg2':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
             im=im[1,:,:]
+            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+
+        if image_type_2_show == 'img_bkg':
+            im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            if ("%.5f" % file_numbers[frame_num])[10] == '0': im=im[0,:,:]
+            if ("%.5f" % file_numbers[frame_num])[10] == '1': im=im[1,:,:]
+
         if image_type_2_show == 'img_dark':
             im=get_raw_image(file_numbers[frame_num],'img_dark')
             im=im[0,:,:]
-        if image_type_2_show != 'img_bkg1' and movie_filename != 'img_bkg2' and image_type_2_show != 'img_dark':
+            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+
+        if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
             im=get_processed_image(file_numbers[0],image_type_2_show)
-
-        # Display the image
-        axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
-        print('displaying img: ' + str(file_numbers[frame_num]))
-
-        
+            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+    
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(len(file_numbers)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
@@ -409,14 +454,15 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
     low_end_all_files= np.ones(len(filenumbers))
     high_end_all_files=np.ones(len(filenumbers))
     for i in range(len(filenumbers)):
-        if image_2_display == 'img_bkg1' or image_2_display == 'img_bkg2':
+        if image_2_display == 'img_bkg1' or image_2_display == 'img_bkg2' or image_2_display == 'img_bkg':
             image = get_raw_image(filenumbers[i],'img_bkg')
             if image_2_display == 'img_bkg1': image = image[0,:,:]
             if image_2_display == 'img_bkg2': image = image[1,:,:]
+            if image_2_display == 'img_bkg':  image = image[0,:,:]            
         if image_2_display == 'img_dark':
             image = get_raw_image(filenumbers[i],'img_dark')
             image = image[0,:,:]
-        if image_2_display != 'img_bkg1' and image_2_display != 'img_bkg2' and image_2_display != 'img_dark':
+        if image_2_display != 'img_bkg1' and image_2_display != 'img_bkg2' and image_2_display != 'img_dark' and image_2_display != 'img_bkg':
             image = get_processed_image(filenumbers[i],image_2_display)
         pdf,bin_edges=np.histogram(image[:],bins=200, range=(np.min(image[:]),np.max(image[:])),density=True)
         cumulative_probability_distribution = np.cumsum(pdf)
