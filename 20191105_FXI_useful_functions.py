@@ -429,8 +429,10 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
 
         if image_type_2_show == 'img_bkg':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            print('hi')
             if ("%.5f" % file_numbers[frame_num])[10] == '0': im=im[0,:,:]
             if ("%.5f" % file_numbers[frame_num])[10] == '1': im=im[1,:,:]
+            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
 
         if image_type_2_show == 'img_dark':
             im=get_raw_image(file_numbers[frame_num],'img_dark')
@@ -438,7 +440,7 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
             axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
 
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
-            im=get_processed_image(file_numbers[0],image_type_2_show)
+            im=get_processed_image(file_numbers[frame_num],image_type_2_show)
             axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
     
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
