@@ -357,10 +357,11 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
-    iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
-    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9,)
     iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 8)    
     iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000,zorder=0)
+    iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
+    y_range = iV_data_axes.get_ylim()[1] - iV_data_axes.get_ylim()[0]
+    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
     authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
@@ -414,7 +415,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
 #    files2[4*i+1] = files[i]+0.0001
 #    files2[4*i+2] = files[i]+0.00001
 #    files2[4*i+3] = files[i]+0.00011
-def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
+def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_filename ):
     # Get the first image
     if image_type_2_show == 'img_bkg1':
         im=get_raw_image(file_numbers[0],'img_bkg')
@@ -432,10 +433,36 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
     if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
         im=get_processed_image(file_numbers[0],image_type_2_show)
         
-    # Create the static plot axes
-    fig_han, axs_han = plt.subplots(1)
-    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.99995)
-    axs_han.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax)
+    # Create the first plot (figure layout, axes, et cetera)
+    figure_width = 10    #figsize=(       height             ,   width     )
+    figure_height = 1080/1280*figure_width/1.5 
+    fig_han = plt.figure(figsize=(figure_width, figure_height ))
+    # The new axis size:left, bottom,         width                                    ,   height
+    im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
+    im_axes.set_axis_off()
+    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.995)
+    zmin = 0.0
+    # Make the colorbar
+    im[-45:-5,-195:]=1E20
+    im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+    im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
+    im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+    im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
+    # Show the whole image
+    im_axes.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
+    # Make the Image Statistics Plot Axis
+    # The new axis size:                left                                           ,   bottom,                               width,                             , height
+    im_statistics = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.85])
+    im_statistics.tick_params(axis = 'both', which = 'major', labelsize = 8)    
+    images_mean, images_std = get_images_statistics(file_numbers, image_type_2_show )
+    statistics = images_mean
+    im_statistics.plot(file_numbers,statistics,zorder=0)
+    im_statistics.set_xlabel('Image Number',fontsize=9,labelpad=1)
+    plt.title('Mean of center', fontsize=9)
+    scatter_han = im_statistics.scatter(file_numbers[0],statistics[0],c='r',s=20,zorder=1)
+    # Show the image number    
+    im_id_text = im_axes.text(im.shape[1]+20,im.shape[0]-5,'img: ' + str(file_numbers[0]) ,fontsize=7.8)           
+    
        
     def change_imshow(frame_num):
         print('displaying img: ' + str(file_numbers[frame_num]))
@@ -443,27 +470,34 @@ def make_movie_just_images(file_numbers, image_type_2_show, movie_filename, ):
         if image_type_2_show == 'img_bkg1':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
             im=im[0,:,:]
-            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
-
         if image_type_2_show == 'img_bkg2':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
             im=im[1,:,:]
-            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
-
         if image_type_2_show == 'img_bkg':
             im=get_raw_image(file_numbers[frame_num],'img_bkg')
             if ("%.5f" % file_numbers[frame_num])[10] == '0': im=im[0,:,:]
             if ("%.5f" % file_numbers[frame_num])[10] == '1': im=im[1,:,:]
-            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
-
         if image_type_2_show == 'img_dark':
             im=get_raw_image(file_numbers[frame_num],'img_dark')
             im=im[0,:,:]
-            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
-
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
             im=get_processed_image(file_numbers[frame_num],image_type_2_show)
-            axs_han.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+        
+        scatter_han.set_offsets((file_numbers[frame_num],statistics[frame_num]))
+        # Make the colorbar
+        im[-45:-5,-195:]=1E20
+        im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+        im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
+        im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+        im_axes.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
+        im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
+        # Show the image number
+        im_id_text.set_text('img: ' + str(file_numbers[frame_num] + ', and index:' + str(frame_num)))     
+        plt.draw()
+        plt.show()
+        time.sleep(1)
+
+        
     
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(len(file_numbers)), blit=False, interval=100, repeat=False)
@@ -884,4 +918,33 @@ def combine_more_loading1_with_more_loading2():
     biologic_data=pandas.read_csv(data_directory+'Biologic_Files/'+biologic_file, sep='\t', skiprows=int(second_line[18:21])-1)
     biologic_start_time=datetime.datetime.strptime(thirteenth_line[25:44],'%m/%d/%Y %H:%M:%S')
 
+
+
+
+
+def get_images_statistics(file_numbers, image_type_2_show ):
+    images_mean = np.ones(len(file_numbers))
+    images_std = np.ones(len(file_numbers))
+    for i in range(0,len(file_numbers)):
+        # Get the first image
+        if image_type_2_show == 'img_bkg1':
+            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=im[0,:,:]
+        if image_type_2_show == 'img_bkg2':
+            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=im[1,:,:]
+        if image_type_2_show == 'img_bkg':
+            im=get_raw_image(file_numbers[i],'img_bkg')
+            if ("%.5f" % file_numbers[0])[10] == '0': im=im[0,:,:]
+            if ("%.5f" % file_numbers[0])[10] == '1': im=im[1,:,:]
+        if image_type_2_show == 'img_dark':
+            im=get_raw_image(file_numbers[i],'img_dark')
+            im=im[0,:,:]
+        if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
+            im=get_processed_image(file_numbers[i],image_type_2_show)
+        
+        images_mean[i] = np.mean(im[520:-520,620:-620])
+        images_std[i] =  np.std(im[620:-620,620:-620])
+        
+    return(images_mean, images_std) 
 
