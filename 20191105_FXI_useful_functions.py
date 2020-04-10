@@ -342,7 +342,6 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
     zmin, zmax = calculate_brightness_contrast(txm_file_numbers, image_used_for_plot, 0.005, 0.995)
-    zmin = 0.0
     # Make the scale bar
     im[-85:-65,-175:-48]=1.0
     im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)
