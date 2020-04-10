@@ -530,7 +530,7 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
         high_end_all_files[i] = bin_centers[np.int(np.argmin(abs(cumulative_probability_distribution - high_end_percentile)))]
 
         
-    return(np.median(low_end_all_files) , np.median(high_end_all_files))
+    return(np.min(low_end_all_files) , np.max(high_end_all_files))
 
 
     
