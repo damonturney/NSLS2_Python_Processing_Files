@@ -455,13 +455,12 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     im_statistics = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.08 ,    0.85])
     im_statistics.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
     images_mean, images_std = get_images_statistics(file_numbers, image_type_2_show )
-    im_statistics.plot(file_numbers,images_mean,zorder=0)
+    im_statistics.plot(file_numbers,images_mean,zorder=1)
     im_statistics.set_xlabel('Image Number',fontsize=9,labelpad=1)
-    plt.title('Mean of center', fontsize=9)
     im_statistics2 = im_statistics.twinx()
     im_statistics2.plot(file_numbers,images_std)
     im_statistics2.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
-    scatter_han = im_statistics.scatter(file_numbers[0],images_mean[0],c='r',s=20,zorder=1)
+    scatter_han = im_statistics.scatter(file_numbers[0],images_mean[0],c='r',s=20,zorder=2)
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1]+60,im.shape[0]-5,'img: ' + str(file_numbers[0]) ,fontsize=7.8)           
     
