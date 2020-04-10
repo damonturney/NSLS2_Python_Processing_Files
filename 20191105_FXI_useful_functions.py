@@ -458,7 +458,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     im_statistics.plot(file_numbers,images_mean,zorder=1)
     im_statistics.set_xlabel('Image Number',fontsize=9,labelpad=1)
     im_statistics2 = im_statistics.twinx()
-    im_statistics2.plot(file_numbers,images_std)
+    im_statistics2.plot(file_numbers,images_std,'g')
     im_statistics2.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
     scatter_han = im_statistics.scatter(file_numbers[0],images_mean[0],c='r',s=20,zorder=2)
     # Show the image number    
@@ -527,12 +527,11 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
         cumulative_probability_distribution = np.cumsum(pdf)
         cumulative_probability_distribution = cumulative_probability_distribution/cumulative_probability_distribution[-1]
         bin_centers = bin_edges[0:-1] + (bin_edges[1] - bin_edges[0])/2
-        low_end_all_files[i] =  np.argmin(abs(cumulative_probability_distribution - low_end_percentile))
-        high_end_all_files[i] = np.argmin(abs(cumulative_probability_distribution - high_end_percentile))
-        low_end = np.int(np.median(low_end_all_files))
-        high_end = np.int(np.median(high_end_all_files))
+        low_end_all_files[i] =  bin_centers[np.int(np.argmin(abs(cumulative_probability_distribution - low_end_percentile)))]
+        high_end_all_files[i] = bin_centers[np.int(np.argmin(abs(cumulative_probability_distribution - high_end_percentile)))]
+
         
-    return(bin_centers[low_end] , bin_centers[high_end])
+    return(np.median(low_end_all_files) , np.median(high_end_all_files))
 
 
     
