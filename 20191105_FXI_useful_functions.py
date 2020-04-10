@@ -452,16 +452,18 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     im_axes.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
     # Make the Image Statistics Plot Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
-    im_statistics = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.85])
-    im_statistics.tick_params(axis = 'both', which = 'major', labelsize = 8)    
+    im_statistics = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.08 ,    0.85])
+    im_statistics.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
     images_mean, images_std = get_images_statistics(file_numbers, image_type_2_show )
-    statistics = images_mean
-    im_statistics.plot(file_numbers,statistics,zorder=0)
+    im_statistics.plot(file_numbers,images_mean,zorder=0)
     im_statistics.set_xlabel('Image Number',fontsize=9,labelpad=1)
     plt.title('Mean of center', fontsize=9)
-    scatter_han = im_statistics.scatter(file_numbers[0],statistics[0],c='r',s=20,zorder=1)
+    im_statistics2 = im_statistics.twinx()
+    im_statistics2.plot(file_numbers,images_std)
+    im_statistics2.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
+    scatter_han = im_statistics.scatter(file_numbers[0],images_mean[0],c='r',s=20,zorder=1)
     # Show the image number    
-    im_id_text = im_axes.text(im.shape[1]+20,im.shape[0]-5,'img: ' + str(file_numbers[0]) ,fontsize=7.8)           
+    im_id_text = im_axes.text(im.shape[1]+60,im.shape[0]-5,'img: ' + str(file_numbers[0]) ,fontsize=7.8)           
     
        
     def change_imshow(frame_num):
@@ -483,7 +485,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
             im=get_processed_image(file_numbers[frame_num],image_type_2_show)
         
-        scatter_han.set_offsets((file_numbers[frame_num],statistics[frame_num]))
+        scatter_han.set_offsets((file_numbers[frame_num],images_mean[frame_num]))
         # Make the colorbar
         im[-45:-5,-195:]=1E20
         im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
@@ -492,7 +494,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
         im_axes.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
         im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
         # Show the image number
-        im_id_text.set_text('img: ' + str(file_numbers[frame_num] + ', and index:' + str(frame_num)))     
+        im_id_text.set_text('img: ' + str(file_numbers[frame_num]) + ', and index:' + str(frame_num))     
         plt.draw()
         plt.show()
         time.sleep(1)
