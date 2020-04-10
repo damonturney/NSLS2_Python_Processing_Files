@@ -363,10 +363,10 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
-    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
-    authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
-    authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
-    authorship_label_axis.text(0,0.0,'by D.E. Turney',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    #authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
+    #authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
+    #authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    #authorship_label_axis.text(0,0.0,'by D.E. Turney',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_file_numbers[0]) ,fontsize=7.8)           
     
