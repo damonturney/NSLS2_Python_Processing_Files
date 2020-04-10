@@ -944,8 +944,9 @@ def get_images_statistics(file_numbers, image_type_2_show ):
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
             im=get_processed_image(file_numbers[i],image_type_2_show)
         
-        images_mean[i] = np.mean(im[520:-520,620:-620])
-        images_std[i] =  np.std(im[620:-620,620:-620])
+        im = im[510:-510,610:-610]
+        images_mean[i] = np.mean(im[:])
+        images_std[i] =  np.std(im[:])
         
     return(images_mean, images_std) 
 
