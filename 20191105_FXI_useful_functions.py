@@ -180,7 +180,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     ims_buffered_aligned = np.stack((Mn_im1_buffered,Mn_im2_buffered_aligned,Cu_im1_buffered_aligned,Cu_im2_buffered_aligned))
     
     # Stuff the data into the h5 file
-    h5object_new.create_dataset('translations_internal', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
+    h5object_new.create_dataset('translations', shape=(4,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3,[-1,-1])))
     h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
     h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
     h5object_old.close()
@@ -225,9 +225,9 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         #print(translation2, error2)
         #print(translation3, error3)
         #print(translation4, error4)
-        print(translation)
-        scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations_internal = read_FXI_processed_h5_metadata(file_numbers[i])
-        h5object2.create_dataset('translations_time_series', shape=(2,1), dtype=np.float64, data=translation)
+        print(translation)  
+        translations = h5object2['translations']
+        translations[...][3,:] = translation
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
