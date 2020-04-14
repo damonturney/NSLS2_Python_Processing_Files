@@ -69,7 +69,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### Workflow ##############################################
-#   NOTE: SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
+#   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image:  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_34565_34875.h5')
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
@@ -106,7 +106,7 @@ def make_average_image(file_numbers, which_image, output_filename ):
 
 
 #filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
-def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename='none'):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
+def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
     Cu_filename=Mn_filename+1
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
@@ -123,14 +123,14 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
     Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
-    if average_dark_image_filename != 'none':
-        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename, 'r')
-        average_dark_image = temp_obj['average_image'][0,:,:]
+    if average_dark_image_filename_Mn != 'none':
+        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Mn, 'r')
+        average_dark_image_Mn = temp_obj['average_image'][0,:,:]
         temp_obj.close()
         im_dark = get_raw_image(Mn_filename,'img_dark')[0,:,:]
         im_bkg  = get_raw_image(Mn_filename,'img_bkg')
-        Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
-        Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)
+        Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[0,:,:] - average_dark_image_Mn)
+        Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[1,:,:] - average_dark_image_Mn)
     translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
@@ -146,11 +146,14 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     
     ##### Shift the Cu images to be aligned with the 1st Mn image
     Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
-    if average_dark_image_filename != 'none':
+    if average_dark_image_filename_Cu != 'none':
+        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Cu, 'r')
+        average_dark_image_Cu = temp_obj['average_image'][0,:,:]
+        temp_obj.close()
         im_dark = get_raw_image(Cu_filename,'img_dark')[0,:,:]
         im_bkg  = get_raw_image(Cu_filename,'img_bkg')
-        Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
-        Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)    
+        Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[0,:,:] - average_dark_image_Cu)
+        Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[1,:,:] - average_dark_image_Cu)    
     translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
     translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
