@@ -100,7 +100,7 @@ def make_average_image(file_numbers, which_image, output_filename ):
     
     average_image = average_image/np.float32(len(file_numbers))
     h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
-    h5object_new.create_dataset('averge_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
+    h5object_new.create_dataset('average_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
     return(average_scalar_series, std_scalar_series)
 
 
@@ -125,9 +125,9 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
     if average_dark_image_filename != 'none':
         temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename, 'r')
-        average_dark_image = temp_obj['average_image']
+        average_dark_image = temp_obj['average_image'][0,:,:]
         temp_obj.close()
-        im_dark = get_raw_image(Mn_filename,'img_dark')
+        im_dark = get_raw_image(Mn_filename,'img_dark')[0,:,:]
         im_bkg  = get_raw_image(Mn_filename,'img_bkg')
         Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
         Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)
@@ -147,7 +147,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     ##### Shift the Cu images to be aligned with the 1st Mn image
     Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
     if average_dark_image_filename != 'none':
-        im_dark = get_raw_image(Cu_filename,'img_dark')
+        im_dark = get_raw_image(Cu_filename,'img_dark')[0,:,:]
         im_bkg  = get_raw_image(Cu_filename,'img_bkg')
         Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
         Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)    
