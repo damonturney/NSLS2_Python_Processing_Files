@@ -70,8 +70,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 ### Workflow ##############################################
 #   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
-# 0) Create average darkfield image:  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_34565_34875.h5')
-# 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
+# 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
+# 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
@@ -180,7 +180,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     ims_buffered_aligned = np.stack((Mn_im1_buffered,Mn_im2_buffered_aligned,Cu_im1_buffered_aligned,Cu_im2_buffered_aligned))
     
     # Stuff the data into the h5 file
-    h5object_new.create_dataset('translations', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
+    h5object_new.create_dataset('translations_internal', shape=(3,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3)))
     h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
     h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
     h5object_old.close()
@@ -227,8 +227,7 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         print(translation4, error4)
         print(translation)
         scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations_internal = read_FXI_processed_h5_metadata(file_numbers[i])
-        del h5object2['translations']
-        h5object2.create_dataset('translations', shape=(2,4), dtype=np.float64, data=np.concatenate((translations_internal,translation),axis=0))
+        h5object2.create_dataset('translations_time_series', shape=(2,2), dtype=np.float64, data=translation)
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
