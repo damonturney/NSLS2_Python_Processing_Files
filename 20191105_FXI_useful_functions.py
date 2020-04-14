@@ -221,13 +221,13 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         translation[0] = np.sum([translation1[0]*(1/error1)/sum_inverse_errors , translation2[0]*(1/error2)/sum_inverse_errors , translation3[0]*(1/error3)/sum_inverse_errors , translation4[0]*(1/error4)/sum_inverse_errors ])
         translation[1] = np.sum([translation1[1]*(1/error1)/sum_inverse_errors , translation2[1]*(1/error2)/sum_inverse_errors , translation3[1]*(1/error3)/sum_inverse_errors , translation4[1]*(1/error4)/sum_inverse_errors ])
         
-        print(translation1, error1)
-        print(translation2, error2)
-        print(translation3, error3)
-        print(translation4, error4)
+        #print(translation1, error1)
+        #print(translation2, error2)
+        #print(translation3, error3)
+        #print(translation4, error4)
         print(translation)
         scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations_internal = read_FXI_processed_h5_metadata(file_numbers[i])
-        h5object2.create_dataset('translations_time_series', shape=(2,2), dtype=np.float64, data=translation)
+        h5object2.create_dataset('translations_time_series', shape=(2,1), dtype=np.float64, data=translation)
 
         # Now actually shift the images to be in alignment
         im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
