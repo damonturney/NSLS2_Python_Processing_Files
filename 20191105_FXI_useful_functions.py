@@ -69,7 +69,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### Workflow ##############################################
-# 0) Create average darkfield image
+#   NOTE: SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
+# 0) Create average darkfield image:  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_34565_34875.h5')
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75])  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
@@ -78,8 +79,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 def make_average_image(file_numbers, which_image, output_filename ):
     test_im = get_raw_image(file_numbers[0],'img_dark')
     average_image = test_im*0.0
-    average_series = np.ones(len(file_numbers))
-    std_series = np.ones(len(file_numbers))
+    average_scalar_series = np.ones(len(file_numbers))
+    std_scalar_series = np.ones(len(file_numbers))
     for i in range(len(file_numbers)):
         # Grab the image
         if which_image == 'img_bkg':
@@ -94,17 +95,18 @@ def make_average_image(file_numbers, which_image, output_filename ):
         print('calculating img: ' + str(file_numbers[i]))
 
         average_image = average_image + im
-        average_series[i] = np.mean(im[:])
-        std_series[i] = np.std(im[:])
+        average_scalar_series[i] = np.mean(im[:])
+        std_scalar_series[i] = np.std(im[:])
     
+    average_image = average_image/np.float32(len(file_numbers))
     h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
     h5object_new.create_dataset('averge_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
-    return(average_series, std_series)
+    return(average_scalar_series, std_scalar_series)
 
 
 
 #filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
-def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
+def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename='none'):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
     Cu_filename=Mn_filename+1
     Mn_filename_string="%.4f" % Mn_filename
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
@@ -112,15 +114,23 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    
     h5object_new = h5py.File(data_directory+data_subdirectory+'processed_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
     h5object_old.copy('scan_id',  h5object_new)
     h5object_old.copy('note',     h5object_new)
-    scan_start_time_string, scan_time1, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(Mn_filename)
-    scan_start_time_string, scan_time2, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(Cu_filename)
+    h5object_old.close()
+    scan_start_time_string, scan_time1, beam_energies_Mn, scan_id, notes = read_FXI_raw_h5_metadata(Mn_filename)
+    scan_start_time_string, scan_time2, beam_energies_Cu, scan_id, notes = read_FXI_raw_h5_metadata(Cu_filename)
     h5object_new.create_dataset('scan_time', shape=(1,),   dtype=np.float64, data=np.mean((scan_time1,scan_time2)))
     
     buffer_edges = 100
     
     ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
     Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
-    
+    if average_dark_image_filename != 'none':
+        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename, 'r')
+        average_dark_image = temp_obj['average_image']
+        temp_obj.close()
+        im_dark = get_raw_image(Mn_filename,'img_dark')
+        im_bkg  = get_raw_image(Mn_filename,'img_bkg')
+        Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
+        Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)
     translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
     Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
@@ -136,6 +146,11 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance):    
     
     ##### Shift the Cu images to be aligned with the 1st Mn image
     Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
+    if average_dark_image_filename != 'none':
+        im_dark = get_raw_image(Cu_filename,'img_dark')
+        im_bkg  = get_raw_image(Cu_filename,'img_bkg')
+        Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[0,:,:] - average_dark_image)
+        Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image ) / (im_bkg[1,:,:] - average_dark_image)    
     translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
     translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
@@ -239,7 +254,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
     ims[ims<=0.0]=np.median(ims[ims>0]) #so that np.log doesn't create an error
-        
+    
     # X-ray absorption coefficients in units of 1/mm 
     a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
     a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
@@ -363,10 +378,10 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
-    #authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
-    #authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
-    #authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
-    #authorship_label_axis.text(0,0.0,'by D.E. Turney',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
+    authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
+    authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_file_numbers[0]) ,fontsize=7.8)           
     
@@ -440,7 +455,6 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
     zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.995)
-    zmin = 0.0
     # Make the colorbar
     im[-45:-5,-195:]=1E20
     im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
@@ -766,7 +780,6 @@ def find_image_translation( im1, im2, im2_cropping, cc_search_distance):
     
     # Calculate the cross correlations
     cc_image=erc_R(im1, im2, im2_cropping, cc_search_distance)   #cross correlation image
-    plt.imshow(cc_image)
 
     # Figure out the translation to align im2 to im1
     max_indices=np.array(np.unravel_index(np.argmax(cc_image,axis=None), cc_image.shape))
