@@ -72,7 +72,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 #   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
-# 2) Run align_processed_images_time_series(range(34565,34646,2),[50,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 2) Run align_processed_images_time_series(range(34565,34646,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
@@ -207,7 +207,7 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
                 
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
-        debuffer = calculate_image_debuffer(np.concatenate((xanes_raw_ims1,xanes_raw_ims2),axis=0))
+        debuffer = calculate_debuffer_multiple_images(np.concatenate((xanes_raw_ims1,xanes_raw_ims2),axis=0))
         
         #Find out how much translation to move each image
         translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
@@ -221,19 +221,19 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         translation[0] = np.sum([translation1[0]*(1/error1)/sum_inverse_errors , translation2[0]*(1/error2)/sum_inverse_errors , translation3[0]*(1/error3)/sum_inverse_errors , translation4[0]*(1/error4)/sum_inverse_errors ])
         translation[1] = np.sum([translation1[1]*(1/error1)/sum_inverse_errors , translation2[1]*(1/error2)/sum_inverse_errors , translation3[1]*(1/error3)/sum_inverse_errors , translation4[1]*(1/error4)/sum_inverse_errors ])
         
-        #print(translation1, error1)
-        #print(translation2, error2)
-        #print(translation3, error3)
-        #print(translation4, error4)
+        print(translation1, error1)
+        print(translation2, error2)
+        print(translation3, error3)
+        print(translation4, error4)
         print(translation)  
         translations = h5object2['translations']
         translations[...][3,:] = translation
 
         # Now actually shift the images to be in alignment
-        im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation1)
-        im2_2 = shift_image_integer(xanes_raw_ims2[1,:,:], -translation2)
-        im2_3 = shift_image_integer(xanes_raw_ims2[2,:,:], -translation3)
-        im2_4 = shift_image_integer(xanes_raw_ims2[3,:,:], -translation4)
+        im2_1 = shift_image_integer(xanes_raw_ims2[0,:,:], -translation)
+        im2_2 = shift_image_integer(xanes_raw_ims2[1,:,:], -translation)
+        im2_3 = shift_image_integer(xanes_raw_ims2[2,:,:], -translation)
+        im2_4 = shift_image_integer(xanes_raw_ims2[3,:,:], -translation)
         #im2_1 = scipy.ndimage.shift(xanes_raw_ims2[0,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
         #im2_2 = scipy.ndimage.shift(xanes_raw_ims2[1,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
         #im2_3 = scipy.ndimage.shift(xanes_raw_ims2[2,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
@@ -877,7 +877,7 @@ def shift_image_integer(im_old,translation):  #filename MUST be supplied as a nu
 
 
     
-def calculate_image_debuffer(ims):
+def calculate_debuffer_multiple_images(ims):
     debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
     debuffer_all_images=[100000,0,100000,0] 
     if ims.ndim == 2: ims=np.stack((ims,ims))  #In case the user gives a single image
@@ -907,7 +907,7 @@ def calculate_image_debuffer_multiple_files(file_numbers):
         h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')        
         xanes_raw_ims = np.array(h5object['xray_images'])
         h5object.close()
-        debuffer = calculate_image_debuffer(xanes_raw_ims)
+        debuffer = calculate_debuffer_multiple_images(xanes_raw_ims)
         if debuffer[0]<debuffer_multi_file[0]: debuffer_multi_file[0]=debuffer[0]
         if debuffer[1]>debuffer_multi_file[1]: debuffer_multi_file[1]=debuffer[1]
         if debuffer[2]<debuffer_multi_file[2]: debuffer_multi_file[2]=debuffer[2]
