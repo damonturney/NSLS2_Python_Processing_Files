@@ -35,17 +35,16 @@ if sys.platform == 'darwin':
 ##########################################################
     
 
-### Data Directory #######################################
+### Set Data Directory ###################################
 data_directory='../20191105_FXI_Beamtime_Work/Data_From_Beamline/';
 data_subdirectory='34563_to_34875/';
 results_directory='../20191105_FXI_Beamtime_Work/Results_Of_Data_Processing/';
 object_list_allfilesdirectories = pathlib.Path(data_directory+data_subdirectory)
 object_recursiveglob_tiffiles = object_list_allfilesdirectories.glob('*.tif')      
 object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
-# to paste together a full pathname for a file: "object_list_filenames_tiffiles[i].parents[0].joinpath(object_list_filenames_tiffiles[i].parts[-1][0:-4]"
-############################################################
+##########################################################
 
-
+### Lists of XANES Scan Numbers ##########################
 # location 1 TOTAL list of movie xanes files
 # xanes_files = np.concatenate((range(34565,34725,2),range(34726,34875,2)))
 #
@@ -64,15 +63,42 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 #
 # scans 34856 to 34874 (after 34874 the potentiostat held CV for 3 more hours -- until 11 am)
 # biologic_file = '20191107_Cu-Bi-Birnessite_37NaOH_more_loading4_C04.mpt'
-#
+##########################################################
 
+
+### List of functions in this file ########################
+# make_average_image(file_numbers, which_image, output_filename ): return(average_scalar_series, std_scalar_series)
+# internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
+# align_processed_images_time_series(file_numbers,im2_cropping, cc_search_distance):  
+# debuffer_multiple_image_files(file_numbers):
+# eliminate_beam_flickering_time_series():
+# calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
+# make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
+# make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_filename ):
+# calculate_brightness_contrast(filenumbers, image_2_display, low_end_percentile, high_end_percentile): return(np.min(low_end_all_files) , np.max(high_end_all_files))
+# plot_single_pixel_least_squares_data(filename,row,column):  
+# read_FXI_raw_h5_metadata(filename): return(scan_start_time_string, scan_time, beam_energies, scan_id, notes) 
+# read_FXI_processed_h5_metadata(filename): return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations)
+# get_raw_image(filename,which_image):
+# get_processed_image(filename,which_image):     
+# dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(test_sum_squares)    
+# calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(baseline_sum_square_error)
+# show_cross_correlation_map(im1,im2,debuffer=0):
+# find_image_translation( im1, im2, im2_cropping, cc_search_distance): return(np.array([translation_y, translation_x]), error, cc_image)
+# erc_R(im1, im2_orig, im2_cropping, cc_search_distance): return(R)
+# shift_image_integer(im_old,translation): return(im_new)
+# calculate_debuffer_multiple_images(ims): return(debuffer_all_images)
+# calculate_image_debuffer_multiple_files(file_numbers):  return(debuffer_multi_file)
+# combine_more_loading1_with_more_loading2():
+# get_images_statistics(file_numbers, image_type_2_show ): return(images_mean, images_std) 
+###########################################################
 
 
 ### Workflow ##############################################
 #   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
 # 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
-# 2) Run align_processed_images_time_series(range(34565,34646,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[50,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 2) Run align_processed_images_time_series(range(34565,34646,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
@@ -105,7 +131,7 @@ def make_average_image(file_numbers, which_image, output_filename ):
 
 
 
-#filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
+# Filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
 def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
     Cu_filename=Mn_filename+1
     Mn_filename_string="%.4f" % Mn_filename
@@ -121,7 +147,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     
     buffer_edges = 100
     
-    ##### Shift the 2nd Mn image to be aligned with the 1st Mn image
+    # Shift the 2nd Mn image to be aligned with the 1st Mn image
     Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
     if average_dark_image_filename_Mn != 'none':
         temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Mn, 'r')
@@ -144,7 +170,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.1234567890123456
     Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
     
-    ##### Shift the Cu images to be aligned with the 1st Mn image
+    # Shift the Cu images to be aligned with the 1st Mn image
     Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
     if average_dark_image_filename_Cu != 'none':
         temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Cu, 'r')
@@ -189,8 +215,8 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
   
     
 
-#filename MUST be supplied as a numpy vector of file numbers
-def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_distance):  #filename MUST be supplied as a numpy vector of file numbers
+# Filename MUST be supplied as a numpy vector of file numbers
+def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_distance):  # Filename MUST be supplied as a numpy vector of file numbers
     for i in range(1,len(file_numbers)):
         
         print(file_numbers[i])
@@ -244,11 +270,37 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         h5object2.close()
     
     
+
+def debuffer_multiple_image_files(file_numbers):
+    debuffer = calculate_image_debuffer_multiple_files(file_numbers)
+    for i in range(1,len(file_numbers)):
+        print(file_numbers[i])
+        filename ="%.4f" % file_numbers[i-1]
+        filename ='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+        h5object = h5py.File(data_directory+data_subdirectory+filename, 'w')        
+        xanes_ims = np.array(h5object['xray_images'])
+        del h5object['xray_images']
+        h5object.close()
+        xanes_ims2 = np.zeros((4,      -debuffer[2]-1+debuffer[3] , -debuffer[0]-1+debuffer[1]),dtype=np.float32)
+        xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        h5object2 = h5py.File(data_directory+data_subdirectory+filename, 'w')  
+        h5object2.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
+        h5object2.close()
+        
+
+
+  
+  
+def eliminate_beam_flickering_time_series(i):
+    print(i)
+    
+   
     
     
-    
-    
-#Run this on the files output from save_aligned_h5_file     #All length units in mm
+# Run this function on the files output from save_aligned_h5_file     #All length units in mm
 def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): #Run this on the files output from save_aligned_h5_file
     if type(filename) != str:
         filename="%.4f" % filename
@@ -320,7 +372,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
 
 
 
-#     image_used_for_plot ='Mn_raw_im1' or 'optical_thickness_Bi' et cetera
+# The variable image_used_for_plot is something like 'Mn_raw_im1' or 'optical_thickness_Bi' et cetera
 def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
         
     # Read timestamps of the images, The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)
@@ -380,7 +432,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
-    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.05,   0.983,  0.05 ,    0.05])
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05])
     authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
@@ -551,8 +603,8 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
 
     
     
-#filename MUST be supplied as a number
-def plot_single_pixel_least_squares_data(filename,row,column):   #filename MUST be supplied as a number
+# Filename MUST be supplied as a number
+def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST be supplied as a number
     if type(filename) != str:
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
@@ -682,19 +734,19 @@ def get_processed_image(filename,which_image):
         xray_images = np.array(h5object['xray_images'])
         return(xray_images)
 
-    if which_image == 'Mn_raw_im1':
+    if which_image == '6520' or which_image == 'Mn_raw_im1':
         xray_images = np.array(h5object['xray_images'])
         return(xray_images[0,:,:])
 
-    if which_image == 'Mn_raw_im2':
+    if which_image == '6600' or which_image == 'Mn_raw_im2':
         xray_images = np.array(h5object['xray_images'])
         return(xray_images[1,:,:])
 
-    if which_image == 'Cu_raw_im1':
+    if which_image == '8970' or which_image == 'Cu_raw_im1':
         xray_images = np.array(h5object['xray_images'])
         return(xray_images[2,:,:])
 
-    if which_image == 'Cu_raw_im2':
+    if which_image == '9050' or which_image == 'Cu_raw_im2':
         xray_images = np.array(h5object['xray_images'])
         return(xray_images[3,:,:])
 
@@ -853,8 +905,8 @@ def erc_R(im1, im2_orig, im2_cropping, cc_search_distance):
 
 
 
-#filename MUST be supplied as a number and must be the Mn raw image file
-def shift_image_integer(im_old,translation):  #filename MUST be supplied as a number and must be the Mn raw image file
+# Filename MUST be supplied as a number and must be the Mn raw image file
+def shift_image_integer(im_old,translation):  # Filename MUST be supplied as a number and must be the Mn raw image file
     
     translation = [np.int(np.round(translation[0])), np.int(np.round(translation[1])), ]
 
