@@ -268,27 +268,39 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         temp_matrix[...] = np.stack((im2_1,im2_2,im2_3,im2_4)) # stupid ass python requires this [...] notation if you want to write data to the h5 file
         #h5object2.create_dataset('xray_images2', shape=(4,im_shape_rows,im_shape_cols), dtype=np.float32, data=np.stack((im2_1,im2_2,im2_3,im2_4)))
         h5object2.close()
+    debuffer_multiple_image_files(file_numbers)
     
     
 
 def debuffer_multiple_image_files(file_numbers):
     debuffer = calculate_image_debuffer_multiple_files(file_numbers)
-    for i in range(1,len(file_numbers)):
-        print(file_numbers[i])
-        filename ="%.4f" % file_numbers[i-1]
+    for i in range(0,len(file_numbers)):
+        filename ="%.4f" % file_numbers[i]
         filename ='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-        h5object = h5py.File(data_directory+data_subdirectory+filename, 'w')        
-        xanes_ims = np.array(h5object['xray_images'])
-        del h5object['xray_images']
-        h5object.close()
+        print('debuffering '+filename)
+        h5object_old = h5py.File(data_directory+data_subdirectory+filename, 'r')  
+        h5object_new = h5py.File(data_directory+data_subdirectory+'temp.h5', 'w')  
+        h5object_old.copy('beam_energies', h5object_new)
+        h5object_old.copy('scan_id',       h5object_new)
+        h5object_old.copy('scan_time',     h5object_new)
+        h5object_old.copy('note',          h5object_new)
+        h5object_old.copy('translations',  h5object_new)
+        if 'optical_thickness_Mn' in h5object_old.keys(): h5object_old.copy('optical_thickness_Mn', h5object_new)
+        if 'optical_thickness_Cu' in h5object_old.keys(): h5object_old.copy('optical_thickness_Cu', h5object_new)
+        if 'optical_thickness_Bi' in h5object_old.keys(): h5object_old.copy('optical_thickness_Bi', h5object_new)
+        if 'optical_thickness_C' in h5object_old.keys():  h5object_old.copy('optical_thickness_C', h5object_new)
+        if 'optical_thickness_El' in h5object_old.keys(): h5object_old.copy('optical_thickness_El', h5object_new)
+        xanes_ims = np.array(h5object_old['xray_images'])
+        h5object_old.close()
         xanes_ims2 = np.zeros((4,      -debuffer[2]-1+debuffer[3] , -debuffer[0]-1+debuffer[1]),dtype=np.float32)
         xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
         xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
         xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
         xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        h5object2 = h5py.File(data_directory+data_subdirectory+filename, 'w')  
-        h5object2.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
-        h5object2.close()
+        h5object_new.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
+        h5object_new.close()
+        os.remove(data_directory+data_subdirectory+filename)
+        os.rename(data_directory+data_subdirectory+'temp.h5',data_directory+data_subdirectory+filename)
         
 
 
@@ -683,7 +695,7 @@ def read_FXI_processed_h5_metadata(filename):  #filename can be 34567.0103  to d
     if type(filename) != str:
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
+    h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')
     beam_energy = np.array(h5object['beam_energies'])
     scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format
     scan_id     = np.array(h5object['scan_id'])
@@ -692,7 +704,7 @@ def read_FXI_processed_h5_metadata(filename):  #filename can be 34567.0103  to d
     scan_start_time = datetime.datetime.fromtimestamp(scan_time)
     scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
     h5object.close() 
-    return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations)
+    return(scan_start_time_string, scan_time, beam_energy, scan_id, str(notes), translations)
 
 
 
