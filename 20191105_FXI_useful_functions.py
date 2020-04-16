@@ -67,20 +67,20 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### List of functions in this file ########################
-# make_average_image(file_numbers, which_image, output_filename ): return(average_scalar_series, std_scalar_series)
+# make_average_image(scan_numbers, which_image, output_filename ): return(average_scalar_series, std_scalar_series)
 # internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
-# align_processed_images_time_series(file_numbers,im2_cropping, cc_search_distance):  
-# debuffer_multiple_image_files(file_numbers):
+# align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
+# debuffer_multiple_image_files(scan_numbers):
 # eliminate_beam_flickering_time_series():
 # calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
-# make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
-# make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_filename ):
+# make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
+# make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
 # calculate_brightness_contrast(filenumbers, image_2_display, low_end_percentile, high_end_percentile): return(np.min(low_end_all_files) , np.max(high_end_all_files))
 # plot_single_pixel_least_squares_data(filename,row,column):  
 # read_FXI_raw_h5_metadata(filename): return(scan_start_time_string, scan_time, beam_energies, scan_id, notes) 
 # read_FXI_processed_h5_metadata(filename): return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations)
 # get_raw_image(filename,which_image):
-# get_processed_image(filename,which_image):     
+# get_processed_image(filename,which_image):  return(image)
 # dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(test_sum_squares)    
 # calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(baseline_sum_square_error)
 # show_cross_correlation_map(im1,im2,debuffer=0):
@@ -88,43 +88,43 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # erc_R(im1, im2_orig, im2_cropping, cc_search_distance): return(R)
 # shift_image_integer(im_old,translation): return(im_new)
 # calculate_debuffer_multiple_images(ims): return(debuffer_all_images)
-# calculate_image_debuffer_multiple_files(file_numbers):  return(debuffer_multi_file)
+# calculate_image_debuffer_multiple_files(scan_numbers):  return(debuffer_multi_file)
 # combine_more_loading1_with_more_loading2():
-# get_images_statistics(file_numbers, image_type_2_show ): return(images_mean, images_std) 
+# get_images_statistics(scan_numbers, image_type_2_show ): return(images_mean, images_std) 
 ###########################################################
 
 
 ### Workflow ##############################################
 #   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
-# 1) Run internally_align_h5_file(file_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
+# 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34646,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
-def make_average_image(file_numbers, which_image, output_filename ):
-    test_im = get_raw_image(file_numbers[0],'img_dark')
+def make_average_image(scan_numbers, which_image, output_filename ):
+    test_im = get_raw_image(scan_numbers[0],'img_dark')
     average_image = test_im*0.0
-    average_scalar_series = np.ones(len(file_numbers))
-    std_scalar_series = np.ones(len(file_numbers))
-    for i in range(len(file_numbers)):
+    average_scalar_series = np.ones(len(scan_numbers))
+    std_scalar_series = np.ones(len(scan_numbers))
+    for i in range(len(scan_numbers)):
         # Grab the image
         if which_image == 'img_bkg':
-            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=get_raw_image(scan_numbers[i],'img_bkg')
             im=np.mean(im,axis=0)
         if which_image == 'img_dark':
-            im=get_raw_image(file_numbers[i],'img_dark')
+            im=get_raw_image(scan_numbers[i],'img_dark')
             im=im[0,:,:]
         if which_image != 'img_bkg' and which_image != 'img_dark':
-            im=get_processed_image(file_numbers[i], which_image)
+            im=get_processed_image(scan_numbers[i], which_image)
         
-        print('calculating img: ' + str(file_numbers[i]))
+        print('calculating img: ' + str(scan_numbers[i]))
 
         average_image = average_image + im
         average_scalar_series[i] = np.mean(im[:])
         std_scalar_series[i] = np.std(im[:])
     
-    average_image = average_image/np.float32(len(file_numbers))
+    average_image = average_image/np.float32(len(scan_numbers))
     h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
     h5object_new.create_dataset('average_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
     return(average_scalar_series, std_scalar_series)
@@ -216,18 +216,18 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     
 
 # Filename MUST be supplied as a numpy vector of file numbers
-def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_distance):  # Filename MUST be supplied as a numpy vector of file numbers
-    for i in range(1,len(file_numbers)):
+def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  # Filename MUST be supplied as a numpy vector of file numbers
+    for i in range(1,len(scan_numbers)):
         
-        print(file_numbers[i])
+        print(scan_numbers[i])
         
-        filename1="%.4f" % file_numbers[i-1]
+        filename1="%.4f" % scan_numbers[i-1]
         filename1='processed_images_'+filename1[0:5]+'_repeat_'+filename1[6:8]+'_pos_'+filename1[8:10]+'.h5'
         h5object1= h5py.File(data_directory+data_subdirectory+filename1, 'r')        
         xanes_raw_ims1 = np.array(h5object1['xray_images'])
         h5object1.close()
         
-        filename2="%.4f" % file_numbers[i]
+        filename2="%.4f" % scan_numbers[i]
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
@@ -268,14 +268,14 @@ def align_processed_images_time_series(file_numbers,im2_cropping, cc_search_dist
         temp_matrix[...] = np.stack((im2_1,im2_2,im2_3,im2_4)) # stupid ass python requires this [...] notation if you want to write data to the h5 file
         #h5object2.create_dataset('xray_images2', shape=(4,im_shape_rows,im_shape_cols), dtype=np.float32, data=np.stack((im2_1,im2_2,im2_3,im2_4)))
         h5object2.close()
-    debuffer_multiple_image_files(file_numbers)
+    debuffer_multiple_image_files(scan_numbers)
     
     
 
-def debuffer_multiple_image_files(file_numbers):
-    debuffer = calculate_image_debuffer_multiple_files(file_numbers)
-    for i in range(0,len(file_numbers)):
-        filename ="%.4f" % file_numbers[i]
+def debuffer_multiple_image_files(scan_numbers):
+    debuffer = calculate_image_debuffer_multiple_files(scan_numbers)
+    for i in range(0,len(scan_numbers)):
+        filename ="%.4f" % scan_numbers[i]
         filename ='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
         print('debuffering '+filename)
         h5object_old = h5py.File(data_directory+data_subdirectory+filename, 'r')  
@@ -306,10 +306,24 @@ def debuffer_multiple_image_files(file_numbers):
 
   
   
-def eliminate_beam_flickering_time_series(i):
-    print(i)
+def eliminate_beam_flickering_time_series(scan_numbers):
+    i=0
+    print('de-flickering ' + str(scan_numbers[i])) 
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+2]])
+    i=1
+    print('de-flickering ' + str(scan_numbers[i])) 
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-1], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]])
+    for i in range(2,len(scan_numbers)-2):
+        print('de-flickering ' + str(scan_numbers[i])) 
+        deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]])
+    i=i+1
+    print('de-flickering ' + str(scan_numbers[i])) 
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]])
+    i=i+1
+    print('de-flickering ' + str(scan_numbers[i])) 
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i-1]])
     
-   
+    
     
     
 # Run this function on the files output from save_aligned_h5_file     #All length units in mm
@@ -385,12 +399,12 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
 
 
 # The variable image_used_for_plot is something like 'Mn_raw_im1' or 'optical_thickness_Bi' et cetera
-def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
+def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
         
     # Read timestamps of the images, The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)
     datetime_array_xanes = np.array([])
     timestamp_array_xanes = np.array([])
-    for i in txm_file_numbers:
+    for i in txm_scan_numbers:
         scan_start_time_string, scan_time, beam_energies, scan_id, notes = read_FXI_raw_h5_metadata(i)
         datetime_xanes_file  = datetime.datetime.fromtimestamp(scan_time)
         timestamp_xanes_file = datetime_xanes_file.timestamp()
@@ -416,13 +430,13 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     closest_index_txm=0
     global closest_index_txm_previous
     closest_index_txm_previous = -1
-    im=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
-    debuffer = calculate_image_debuffer_multiple_files(txm_file_numbers)
+    im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
+    debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
     im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
-    zmin, zmax = calculate_brightness_contrast(txm_file_numbers, image_used_for_plot, 0.005, 0.995)
+    zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
     # Make the scale bar
     im[-85:-65,-175:-48]=1.0
     im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)
@@ -449,7 +463,7 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
-    im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_file_numbers[0]) ,fontsize=7.8)           
+    im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=7.8)           
     
    
     def change_imshow(frame_num):
@@ -460,8 +474,8 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
         closest_index_txm=abs(timestamp_array_xanes - np.float64(frame_time.timestamp())).argmin()
         if closest_index_txm != closest_index_txm_previous:
             closest_index_txm_previous=closest_index_txm
-            im=get_processed_image(txm_file_numbers[closest_index_txm],image_used_for_plot)
-            im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #im   = get_processed_image(txm_file_numbers[closest_index_txm],'Mn_thickness')
+            im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
+            im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #im   = get_processed_image(txm_scan_numbers[closest_index_txm],'Mn_thickness')
             # Make the scale bar
             im[-85:-65,-175:-48]=1.0
             im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)           
@@ -476,8 +490,8 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
             # Show the whole image
             im_axes.imshow(im, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
             # Show the image number
-            im_id_text.set_text('img: ' + str(txm_file_numbers[closest_index_txm]))           
-            print('displaying img: ' + str(txm_file_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
+            im_id_text.set_text('img: ' + str(txm_scan_numbers[closest_index_txm]))           
+            print('displaying img: ' + str(txm_scan_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
 
         #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', vmin=0.235, vmax=0.94)
         
@@ -488,30 +502,30 @@ def make_movie_with_potentiostat_data(txm_file_numbers,biologic_file, image_used
     animation_handle.save(output_filename, writer=writer)
 
 
-# file_numbers format: 34565.0000 means the first beam energy, location 0         34565.0001 means the first beam energy, location 1           34565.0101 means the second beam energy, location 1
+# scan_numbers format: 34565.0000 means the first beam energy, location 0         34565.0001 means the first beam energy, location 1           34565.0101 means the second beam energy, location 1
 # files = np.concatenate((range(34565,34725,2),range(34726,34875,2))) ; files2=np.ones(len(files)*4)
 #for i in range(len(files)):
 #    files2[4*i] = files[i]
 #    files2[4*i+1] = files[i]+0.0001
 #    files2[4*i+2] = files[i]+0.00001
 #    files2[4*i+3] = files[i]+0.00011
-def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_filename ):
+def make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
     # Get the first image
     if image_type_2_show == 'img_bkg1':
-        im=get_raw_image(file_numbers[0],'img_bkg')
+        im=get_raw_image(scan_numbers[0],'img_bkg')
         im=im[0,:,:]
     if image_type_2_show == 'img_bkg2':
-        im=get_raw_image(file_numbers[0],'img_bkg')
+        im=get_raw_image(scan_numbers[0],'img_bkg')
         im=im[1,:,:]
     if image_type_2_show == 'img_bkg':
-        im=get_raw_image(file_numbers[0],'img_bkg')
-        if ("%.5f" % file_numbers[0])[10] == '0': im=im[0,:,:]
-        if ("%.5f" % file_numbers[0])[10] == '1': im=im[1,:,:]
+        im=get_raw_image(scan_numbers[0],'img_bkg')
+        if ("%.5f" % scan_numbers[0])[10] == '0': im=im[0,:,:]
+        if ("%.5f" % scan_numbers[0])[10] == '1': im=im[1,:,:]
     if image_type_2_show == 'img_dark':
-        im=get_raw_image(file_numbers[0],'img_dark')
+        im=get_raw_image(scan_numbers[0],'img_dark')
         im=im[0,:,:]
     if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
-        im=get_processed_image(file_numbers[0],image_type_2_show)
+        im=get_processed_image(scan_numbers[0],image_type_2_show)
         
     # Create the first plot (figure layout, axes, et cetera)
     figure_width = 10    #figsize=(       height             ,   width     )
@@ -520,7 +534,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
-    zmin, zmax = calculate_brightness_contrast(file_numbers, image_type_2_show, 0.005, 0.995)
+    zmin, zmax = calculate_brightness_contrast(scan_numbers, image_type_2_show, 0.005, 0.995)
     # Make the colorbar
     im[-45:-5,-195:]=1E20
     im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
@@ -533,37 +547,37 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     im_statistics = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.08 ,    0.85])
     im_statistics.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
-    images_mean, images_std = get_images_statistics(file_numbers, image_type_2_show )
-    im_statistics.plot(file_numbers,images_mean,zorder=1)
+    images_mean, images_std = get_images_statistics(scan_numbers, image_type_2_show )
+    im_statistics.plot(scan_numbers,images_mean,zorder=1)
     im_statistics.set_xlabel('Image Number',fontsize=9,labelpad=1)
     im_statistics2 = im_statistics.twinx()
-    im_statistics2.plot(file_numbers,images_std,'g')
+    im_statistics2.plot(scan_numbers,images_std,'g')
     im_statistics2.tick_params(axis = 'both', which = 'major', direction='in',labelsize = 7)    
-    scatter_han = im_statistics.scatter(file_numbers[0],images_mean[0],c='r',s=20,zorder=2)
+    scatter_han = im_statistics.scatter(scan_numbers[0],images_mean[0],c='r',s=20,zorder=2)
     # Show the image number    
-    im_id_text = im_axes.text(im.shape[1]+60,im.shape[0]-5,'img: ' + str(file_numbers[0]) ,fontsize=7.8)           
+    im_id_text = im_axes.text(im.shape[1]+60,im.shape[0]-5,'img: ' + str(scan_numbers[0]) ,fontsize=7.8)           
     
        
     def change_imshow(frame_num):
-        print('displaying img: ' + str(file_numbers[frame_num]))
+        print('displaying img: ' + str(scan_numbers[frame_num]))
         # Grab the new image  
         if image_type_2_show == 'img_bkg1':
-            im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            im=get_raw_image(scan_numbers[frame_num],'img_bkg')
             im=im[0,:,:]
         if image_type_2_show == 'img_bkg2':
-            im=get_raw_image(file_numbers[frame_num],'img_bkg')
+            im=get_raw_image(scan_numbers[frame_num],'img_bkg')
             im=im[1,:,:]
         if image_type_2_show == 'img_bkg':
-            im=get_raw_image(file_numbers[frame_num],'img_bkg')
-            if ("%.5f" % file_numbers[frame_num])[10] == '0': im=im[0,:,:]
-            if ("%.5f" % file_numbers[frame_num])[10] == '1': im=im[1,:,:]
+            im=get_raw_image(scan_numbers[frame_num],'img_bkg')
+            if ("%.5f" % scan_numbers[frame_num])[10] == '0': im=im[0,:,:]
+            if ("%.5f" % scan_numbers[frame_num])[10] == '1': im=im[1,:,:]
         if image_type_2_show == 'img_dark':
-            im=get_raw_image(file_numbers[frame_num],'img_dark')
+            im=get_raw_image(scan_numbers[frame_num],'img_dark')
             im=im[0,:,:]
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
-            im=get_processed_image(file_numbers[frame_num],image_type_2_show)
+            im=get_processed_image(scan_numbers[frame_num],image_type_2_show)
         
-        scatter_han.set_offsets((file_numbers[frame_num],images_mean[frame_num]))
+        scatter_han.set_offsets((scan_numbers[frame_num],images_mean[frame_num]))
         # Make the colorbar
         im[-45:-5,-195:]=1E20
         im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
@@ -572,7 +586,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
         im_axes.imshow(im, vmin=zmin, vmax=zmax, interpolation='none', cmap='gray')
         im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
         # Show the image number
-        im_id_text.set_text('img: ' + str(file_numbers[frame_num]) + ', and index:' + str(frame_num))     
+        im_id_text.set_text('img: ' + str(scan_numbers[frame_num]) + ', and index:' + str(frame_num))     
         plt.draw()
         plt.show()
         time.sleep(1)
@@ -580,7 +594,7 @@ def make_movie_with_image_statistics(file_numbers, image_type_2_show, movie_file
         
     
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
-    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(len(file_numbers)), blit=False, interval=100, repeat=False)
+    animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(len(scan_numbers)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
     animation_handle.save(movie_filename, writer=writer)
@@ -960,13 +974,15 @@ def calculate_debuffer_multiple_images(ims):
         if debuffer[3]>debuffer_all_images[3]: debuffer_all_images[3]=debuffer[3]
         
     return(debuffer_all_images)
+
+
     
     
-def calculate_image_debuffer_multiple_files(file_numbers):
+def calculate_image_debuffer_multiple_files(scan_numbers):
     debuffer_multi_file = [100000,0,100000,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
     
-    for i in range(0,len(file_numbers)):
-        filename="%.4f" % file_numbers[i]
+    for i in range(0,len(scan_numbers)):
+        filename="%.4f" % scan_numbers[i]
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
         h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')        
         xanes_raw_ims = np.array(h5object['xray_images'])
@@ -1000,26 +1016,26 @@ def combine_more_loading1_with_more_loading2():
 
 
 
-def get_images_statistics(file_numbers, image_type_2_show ):
-    images_mean = np.ones(len(file_numbers))
-    images_std = np.ones(len(file_numbers))
-    for i in range(0,len(file_numbers)):
+def get_images_statistics(scan_numbers, image_type_2_show ):
+    images_mean = np.ones(len(scan_numbers))
+    images_std = np.ones(len(scan_numbers))
+    for i in range(0,len(scan_numbers)):
         # Get the first image
         if image_type_2_show == 'img_bkg1':
-            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=get_raw_image(scan_numbers[i],'img_bkg')
             im=im[0,:,:]
         if image_type_2_show == 'img_bkg2':
-            im=get_raw_image(file_numbers[i],'img_bkg')
+            im=get_raw_image(scan_numbers[i],'img_bkg')
             im=im[1,:,:]
         if image_type_2_show == 'img_bkg':
-            im=get_raw_image(file_numbers[i],'img_bkg')
-            if ("%.5f" % file_numbers[0])[10] == '0': im=im[0,:,:]
-            if ("%.5f" % file_numbers[0])[10] == '1': im=im[1,:,:]
+            im=get_raw_image(scan_numbers[i],'img_bkg')
+            if ("%.5f" % scan_numbers[0])[10] == '0': im=im[0,:,:]
+            if ("%.5f" % scan_numbers[0])[10] == '1': im=im[1,:,:]
         if image_type_2_show == 'img_dark':
-            im=get_raw_image(file_numbers[i],'img_dark')
+            im=get_raw_image(scan_numbers[i],'img_dark')
             im=im[0,:,:]
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
-            im=get_processed_image(file_numbers[i],image_type_2_show)
+            im=get_processed_image(scan_numbers[i],image_type_2_show)
         
         im = im[510:-510,610:-610]
         images_mean[i] = np.mean(im[:])
@@ -1027,3 +1043,70 @@ def get_images_statistics(file_numbers, image_type_2_show ):
         
     return(images_mean, images_std) 
 
+
+
+
+       # there must be four scan numbers in other_scan_numbers_in_baseline
+def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
+    filename_string ="%.4f" % target_scan_number
+    filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
+    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
+    
+    # Deflicker the 6520 eV image
+    target_image = get_processed_image(target_scan_number, '6520')
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6520')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6520')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6520')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6520')/5 
+    fractional_change = (target_image - baseline_image)/baseline_image
+    fractional_change[fractional_change> 0.5] = 0.0
+    fractional_change[fractional_change<-0.5] = 0.0
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=200,mode='reflect')
+    debuffer = np.array([0,0,0,0],dtype=np.int)
+    im_shape_rows = target_image.shape[0]
+    im_shape_cols = target_image.shape[1]
+    im_half_rows = np.int(im_shape_rows/2)
+    im_half_cols = np.int(im_shape_cols/2)
+    debuffer[0] = int( np.max(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)) )
+    debuffer[1] = int( np.min(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)) )
+    debuffer[3] = int( np.min(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)) ) + im_half_rows
+    h5object['xray_images'][0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+     
+    # Deflicker the 6600 eV image
+    target_image = get_processed_image(target_scan_number, '6600')
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6600')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6600')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6600')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6600')/5 
+    fractional_change = (target_image - baseline_image)/baseline_image
+    fractional_change[fractional_change> 0.5] = 0.0
+    fractional_change[fractional_change<-0.5] = 0.0
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=200,mode='reflect')
+    debuffer[0] = int( np.max(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)) )
+    debuffer[1] = int( np.min(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)) )
+    debuffer[3] = int( np.min(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)) ) + im_half_rows
+    h5object['xray_images'][1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    
+    # Deflicker the 8970 eV image
+    target_image = get_processed_image(target_scan_number, '8970')
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '8970')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '8970')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '8970')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '8970')/5 
+    fractional_change = (target_image - baseline_image)/baseline_image
+    fractional_change[fractional_change> 0.5] = 0.0
+    fractional_change[fractional_change<-0.5] = 0.0
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=100,mode='reflect')
+    debuffer[0] = int( np.max(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)) )
+    debuffer[1] = int( np.min(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)) )
+    debuffer[3] = int( np.min(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)) ) + im_half_rows
+    h5object['xray_images'][2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    
+    # Deflicker the 9050 eV image
+    target_image = get_processed_image(target_scan_number, '9050')
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '9050')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '9050')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '9050')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '9050')/5 
+    fractional_change = (target_image - baseline_image)/baseline_image
+    fractional_change[fractional_change> 0.5] = 0.0
+    fractional_change[fractional_change<-0.5] = 0.0
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=100,mode='reflect')
+    debuffer[0] = int( np.max(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)) )
+    debuffer[1] = int( np.min(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)) )
+    debuffer[3] = int( np.min(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)) ) + im_half_rows
+    h5object['xray_images'][3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    
+    h5object.close()
