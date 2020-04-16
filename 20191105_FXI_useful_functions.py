@@ -97,8 +97,9 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 #   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
 # 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
-# 2) Run align_processed_images_time_series(range(34565,34646,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
-# 3) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
+# 2) Run align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 3) eliminate_beam_flickering_time_series(range(34565,34725,2),[200,200,100,100])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 200 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 100
+# 4) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
 def make_average_image(scan_numbers, which_image, output_filename ):
@@ -271,56 +272,25 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
     
     
 
-def debuffer_multiple_image_files(scan_numbers):
-    debuffer = calculate_image_debuffer_multiple_files(scan_numbers)
-    for i in range(0,len(scan_numbers)):
-        filename ="%.4f" % scan_numbers[i]
-        filename ='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-        print('debuffering '+filename)
-        h5object_old = h5py.File(data_directory+data_subdirectory+filename, 'r')  
-        h5object_new = h5py.File(data_directory+data_subdirectory+'temp.h5', 'w')  
-        h5object_old.copy('beam_energies', h5object_new)
-        h5object_old.copy('scan_id',       h5object_new)
-        h5object_old.copy('scan_time',     h5object_new)
-        h5object_old.copy('note',          h5object_new)
-        h5object_old.copy('translations',  h5object_new)
-        if 'optical_thickness_Mn' in h5object_old.keys(): h5object_old.copy('optical_thickness_Mn', h5object_new)
-        if 'optical_thickness_Cu' in h5object_old.keys(): h5object_old.copy('optical_thickness_Cu', h5object_new)
-        if 'optical_thickness_Bi' in h5object_old.keys(): h5object_old.copy('optical_thickness_Bi', h5object_new)
-        if 'optical_thickness_C' in h5object_old.keys():  h5object_old.copy('optical_thickness_C', h5object_new)
-        if 'optical_thickness_El' in h5object_old.keys(): h5object_old.copy('optical_thickness_El', h5object_new)
-        xanes_ims = np.array(h5object_old['xray_images'])
-        h5object_old.close()
-        xanes_ims2 = np.zeros((4,      -debuffer[2]-1+debuffer[3] , -debuffer[0]-1+debuffer[1]),dtype=np.float32)
-        xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        h5object_new.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
-        h5object_new.close()
-        os.remove(data_directory+data_subdirectory+filename)
-        os.rename(data_directory+data_subdirectory+'temp.h5',data_directory+data_subdirectory+filename)
-        
-
 
   
   
-def eliminate_beam_flickering_time_series(scan_numbers):
+def eliminate_beam_flickering_time_series(scan_numbers,gaussian_filter_sizes):
     i=0
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]])
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes)
     i=1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-1], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]])
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-1], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
     for i in range(2,len(scan_numbers)-2):
         print('de-flickering ' + str(scan_numbers[i])) 
-        deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]])
+        deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
     i=i+1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]])
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]],gaussian_filter_sizes)
     i=i+1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-3], scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i-1]])
+    deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i-3], scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i-1]],gaussian_filter_sizes)
     
     
     
@@ -953,6 +923,45 @@ def shift_image_integer(im_old,translation):  # Filename MUST be supplied as a n
     
 
 
+
+
+def debuffer_multiple_image_files(scan_numbers):
+    debuffer = calculate_image_debuffer_multiple_files(scan_numbers)
+    for i in range(0,len(scan_numbers)):
+        filename ="%.4f" % scan_numbers[i]
+        filename ='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+        print('debuffering '+filename)
+        h5object_old = h5py.File(data_directory+data_subdirectory+filename, 'r')  
+        h5object_new = h5py.File(data_directory+data_subdirectory+'temp.h5', 'w')  
+        h5object_old.copy('beam_energies', h5object_new)
+        h5object_old.copy('scan_id',       h5object_new)
+        h5object_old.copy('scan_time',     h5object_new)
+        h5object_old.copy('note',          h5object_new)
+        h5object_old.copy('translations',  h5object_new)
+        if 'optical_thickness_Mn' in h5object_old.keys(): h5object_old.copy('optical_thickness_Mn', h5object_new)
+        if 'optical_thickness_Cu' in h5object_old.keys(): h5object_old.copy('optical_thickness_Cu', h5object_new)
+        if 'optical_thickness_Bi' in h5object_old.keys(): h5object_old.copy('optical_thickness_Bi', h5object_new)
+        if 'optical_thickness_C' in h5object_old.keys():  h5object_old.copy('optical_thickness_C', h5object_new)
+        if 'optical_thickness_El' in h5object_old.keys(): h5object_old.copy('optical_thickness_El', h5object_new)
+        xanes_ims = np.array(h5object_old['xray_images'])
+        h5object_old.close()
+        xanes_ims2 = np.zeros((4,      -debuffer[2]-1+debuffer[3] , -debuffer[0]-1+debuffer[1]),dtype=np.float32)
+        xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        h5object_new.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
+        h5object_new.close()
+        os.remove(data_directory+data_subdirectory+filename)
+        os.rename(data_directory+data_subdirectory+'temp.h5',data_directory+data_subdirectory+filename)
+        
+
+
+
+
+
+
+
     
 def calculate_debuffer_multiple_images(ims):
     debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
@@ -1046,7 +1055,7 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 
 
        # there must be four scan numbers in other_scan_numbers_in_baseline
-def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
+def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,gaussian_filter_sizes):
     filename_string ="%.4f" % target_scan_number
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
     h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
@@ -1057,7 +1066,7 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
-    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=200,mode='reflect')
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[0],mode='reflect')
     debuffer = np.array([0,0,0,0],dtype=np.int)
     im_shape_rows = target_image.shape[0]
     im_shape_cols = target_image.shape[1]
@@ -1075,7 +1084,7 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
-    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=200,mode='reflect')
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[1],mode='reflect')
     debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
     debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
     debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
@@ -1088,7 +1097,7 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
-    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=100,mode='reflect')
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[2],mode='reflect')
     debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
     debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
     debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
@@ -1101,7 +1110,7 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline):
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
-    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=100,mode='reflect')
+    blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[3],mode='reflect')
     debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
     debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
     debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
