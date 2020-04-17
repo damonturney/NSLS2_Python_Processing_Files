@@ -747,22 +747,22 @@ def get_processed_image(filename,which_image):
         return(xray_images[3,:,:])
 
     if which_image == 'all_thickness':
-        return(np.stack((optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
+        return(np.stack((np.array(h5object['optical_thickness_Mn']),np.array(h5object['optical_thickness_Cu']),np.array(h5object['optical_thickness_Bi']),np.array(h5object['optical_thickness_C']),np.array(h5object['optical_thickness_El']))))
         
     if which_image == 'Mn_thickness' or which_image == 'Mn':
-        return(optical_thickness_Mn)
+        return(np.array(h5object['optical_thickness_Mn']))
         
     if which_image == 'Cu_thickness' or which_image == 'Cu':
-        return(optical_thickness_Cu)
+        return(np.array(h5object['optical_thickness_Cu']))
         
     if which_image == 'Bi_thickness' or which_image == 'Bi':
-        return(optical_thickness_Bi)
+        return(np.array(h5object['optical_thickness_Bi']))
         
     if which_image == 'C_thickness'  or which_image == 'C':
-        return(optical_thickness_C)
+        return(np.array(h5object['optical_thickness_C']))
         
     if which_image == 'El_thickness' or which_image == 'El':
-        return(optical_thickness_El)
+        return(np.array(h5object['optical_thickness_El']))
         
         
         
