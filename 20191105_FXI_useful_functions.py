@@ -94,12 +94,13 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### Workflow ##############################################
-#   NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
-# 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image(np.concatenate((range(34565,34725,2),range(34726,34875,2))), 'img_dark',  'ave_dark_5s_exposure_34565_34875.h5')
+# NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
+# 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')
 # 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
-# 3) eliminate_beam_flickering_time_series(range(34565,34725,2),[200,200,100,100])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 200 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 100
-# 4) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
+# 3) eliminate_beam_flickering_time_series(range(34565,34725,2),[100,100,50,50])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
+# 4) calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): 
+# 5) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
 def make_average_image(scan_numbers, which_image, output_filename ):
@@ -748,20 +749,20 @@ def get_processed_image(filename,which_image):
     if which_image == 'all_thickness':
         return(np.stack((optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
         
-    if which_image == 'Mn_thickness':
+    if which_image == 'Mn_thickness' or which_image == 'Mn':
         return(optical_thickness_Mn)
         
-    if which_image == 'Cu_thickness':
-        return(optical_thickness_Mn)
+    if which_image == 'Cu_thickness' or which_image == 'Cu':
+        return(optical_thickness_Cu)
         
-    if which_image == 'Bi_thickness':
-        return(optical_thickness_Mn)
+    if which_image == 'Bi_thickness' or which_image == 'Bi':
+        return(optical_thickness_Bi)
         
-    if which_image == 'C_thickness':
-        return(optical_thickness_Mn)
+    if which_image == 'C_thickness'  or which_image == 'C':
+        return(optical_thickness_C)
         
-    if which_image == 'El_thickness':
-        return(optical_thickness_Mn)
+    if which_image == 'El_thickness' or which_image == 'El':
+        return(optical_thickness_El)
         
         
         
