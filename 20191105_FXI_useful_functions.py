@@ -883,7 +883,7 @@ def erc_R(im1, im2_orig, im2_cropping, cc_search_distance):
     for m in range(im2_cropping[0]-cc_search_distance[0],im2_cropping[0]+1+cc_search_distance[1],3):
         for n in range(im2_cropping[2]-cc_search_distance[2],im2_cropping[2]+1+cc_search_distance[3],3):
             #print(m,n)
-            im1_subwindow[:,:]=im1[n:n+winsize2[0]-1,m:m+winsize2[1]-1];
+            im1_subwindow[:,:]=im1[n:n+winsize2[0]-1+1,m:m+winsize2[1]-1+1];
             #%I use R[n+winsize/2,m+winsize/2] in order to keep in line with Kristof Sveen's convention on the meaning of R
             R[n,m]=np.sum((im2[:]-np.mean(im2[:])) * (im1_subwindow[:]-np.mean(im1_subwindow[:]))) / (length_im2-1)/np.sqrt(variance_im2*np.var(im1_subwindow[:]))  
     
