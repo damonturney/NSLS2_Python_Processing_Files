@@ -470,7 +470,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15, bitrate=5000)
     animation_handle.save(output_filename, writer=writer)
-    fig_han.close()
+    plt.close()
 
 
 
@@ -572,7 +572,7 @@ def make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_file
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
     animation_handle.save(movie_filename, writer=writer)
-    fig_han.close()
+    plt.close()
 
 
 
