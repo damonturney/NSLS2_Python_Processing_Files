@@ -70,7 +70,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
 # align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
 # debuffer_multiple_image_files(scan_numbers):
-# eliminate_beam_flickering_time_series():
+# deflickering_time_series():
 # calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
 # make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
 # make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
@@ -98,7 +98,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')
 # 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. which have the copper TEM mesh which confuses the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
 # 2) Run align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
-# 3) eliminate_beam_flickering_time_series(range(34565,34725,2),[100,100,50,50])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
+# 3) deflickering_time_series(range(34565,34725,2),[100,100,50,50])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
 # 4) calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): 
 # 5) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
@@ -276,7 +276,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
 
   
   
-def eliminate_beam_flickering_time_series(scan_numbers,gaussian_filter_sizes):
+def deflickering_time_series(scan_numbers,gaussian_filter_sizes):
     i=0
     print('de-flickering ' + str(scan_numbers[i])) 
     deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes)
@@ -470,6 +470,10 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15, bitrate=5000)
     animation_handle.save(output_filename, writer=writer)
+    fig_han.close()
+
+
+
 
 
 # scan_numbers format: 34565.0000 means the first beam energy, location 0         34565.0001 means the first beam energy, location 1           34565.0101 means the second beam energy, location 1
@@ -568,7 +572,7 @@ def make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_file
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15)
     animation_handle.save(movie_filename, writer=writer)
-
+    fig_han.close()
 
 
 
