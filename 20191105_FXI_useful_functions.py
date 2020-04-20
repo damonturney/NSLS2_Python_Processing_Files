@@ -792,8 +792,8 @@ def get_processed_image(filename,which_image):
         return(returned_image)
         
     if which_image == 'elemental_RGB':
-        returned_image = np.ones((im.shape[1],im.shape[2],3))
         im = np.array(h5object['optical_thickness_Mn'])
+        returned_image = np.ones((im.shape[1],im.shape[2],3))
         returned_image[:,:,0] = im[:,:]
         im = np.array(h5object['optical_thickness_Cu'])
         returned_image[:,:,1] = im[:,:]
