@@ -408,13 +408,14 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     im_axes.set_axis_off()
     zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
     # Make the scale bar
-    im[-85:-65,-175:-48]=1.0
+    for j in range(im.shape[2]): im[-85:-65,-175:-48,j]=1.0
     im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)
     # Make the colorbar
-    im[-45:-5,-195:-23]=1.0
-    im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
-    im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
-    im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+    for j in range(im.shape[2]): 
+        im[-45:-5,-195:-23,j]=1.0
+        im[-45:-27,-180:-40,j]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+        im[-45:-27,-180,j] = 0.0; im[-45:-27,-40,j] = 0.0; im[-45,-180:-40,j] = 0.0; im[-27,-180:-40,j] = 0.0;     
+        im[-45:-27,-181,j] = 0.0; im[-45:-27,-39,j] = 0.0; im[-46,-180:-40,j] = 0.0; im[-26,-180:-40,j] = 0.0;     
     im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
     # Show the whole image
     im_axes.imshow(im,cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
@@ -447,15 +448,14 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
             im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]            #im   = get_processed_image(txm_scan_numbers[closest_index_txm],'Mn_thickness')
             # Make the scale bar
-            im[-85:-65,-175:-48]=1.0
-            im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)           
-            #im[-40:-20,-225:-98]=1.0
-            #plt.text(im.shape[1]-191,im.shape[0]-22,'5 um',fontsize=7.8)
+            for j in range(im.shape[2]): im[-85:-65,-175:-48,j]=1.0
+            #im_axes.text(im.shape[1]-138,im.shape[0]-68,'5 um',fontsize=7.8)
             # Make the colorbar
-            im[-45:-5,-195:-23]=1.0
-            im[-45:-27,-180:-40]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
-            im[-45:-27,-180] = 0.0; im[-45:-27,-40] = 0.0; im[-45,-180:-40] = 0.0; im[-27,-180:-40] = 0.0;     
-            im[-45:-27,-181] = 0.0; im[-45:-27,-39] = 0.0; im[-46,-180:-40] = 0.0; im[-26,-180:-40] = 0.0;     
+            for j in range(im.shape[2]): 
+                im[-45:-5,-195:-23,j]=1.0
+                im[-45:-27,-180:-40,j]=np.tile(np.arange(zmin,zmax,(zmax - zmin)/140),(18,1))
+                im[-45:-27,-180,j] = 0.0; im[-45:-27,-40,j] = 0.0; im[-45,-180:-40,j] = 0.0; im[-27,-180:-40,j] = 0.0;     
+                im[-45:-27,-181,j] = 0.0; im[-45:-27,-39,j] = 0.0; im[-46,-180:-40,j] = 0.0; im[-26,-180:-40,j] = 0.0;     
             im_axes.text(im.shape[1]-195,im.shape[0]-7,"%.1f" % zmin + '                ' + "%.1f" % zmax,fontsize=7.5)
             # Show the whole image
             im_axes.imshow(im, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
