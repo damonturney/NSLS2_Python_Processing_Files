@@ -96,7 +96,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ### Workflow ##############################################
 # NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')
-# 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images. Use a command like for i in range(34675,34725,2): create_aligned_h5_file(i);      NOTE:  file 34675 is missing, see your beamline notes -- before 34675 the Mn files are odd numbered and after 34675 the Mn files are even numbered .   the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] is how far to search in each direction when calculating the cross correlations
+# 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
 # 2) Run align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
 # 3) deflickering_time_series(range(34565,34725,2),[100,100,50,50])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
 # 4) calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): 
@@ -117,7 +117,7 @@ def make_average_image(scan_numbers, which_image, output_filename ):
             im=get_raw_image(scan_numbers[i],'img_dark')
             im=im[0,:,:]
         if which_image != 'img_bkg' and which_image != 'img_dark':
-            im=get_processed_image(scan_numbers[i], which_image)
+            im=get_processed_image(scan_numbers[i], which_image)[:,:,0]
         
         print('calculating img: ' + str(scan_numbers[i]))
 
@@ -589,7 +589,7 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
             image = get_raw_image(filenumbers[i],'img_dark')
             image = image[0,:,:]
         if image_2_display != 'img_bkg1' and image_2_display != 'img_bkg2' and image_2_display != 'img_dark' and image_2_display != 'img_bkg':
-            image = get_processed_image(filenumbers[i],image_2_display)
+            image = get_processed_image(filenumbers[i],image_2_display)[:,:,0]
         pdf,bin_edges=np.histogram(image[:],bins=200, range=(np.min(image[:]),np.max(image[:])),density=True)
         cumulative_probability_distribution = np.cumsum(pdf)
         cumulative_probability_distribution = cumulative_probability_distribution/cumulative_probability_distribution[-1]
@@ -726,7 +726,7 @@ def get_processed_image(filename,which_image):
         optical_thickness_Mn = np.array(h5object['optical_thickness_Mn'])
         optical_thickness_Cu = np.array(h5object['optical_thickness_Cu'])
         optical_thickness_Bi = np.array(h5object['optical_thickness_Bi'])
-        optical_thickness_C = np.array(h5object['optical_thickness_C'])
+        optical_thickness_C  = np.array(h5object['optical_thickness_C'])
         optical_thickness_El = np.array(h5object['optical_thickness_El'])
         return(np.stack((xray_images,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
     
@@ -736,41 +736,73 @@ def get_processed_image(filename,which_image):
 
     if which_image == '6520' or which_image == 'Mn_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        return(xray_images[0,:,:])
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        returned_image[:,:,0] = xray_images[0,:,:]
+        return(returned_image)
 
     if which_image == '6600' or which_image == 'Mn_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        return(xray_images[1,:,:])
-
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        returned_image[:,:,0] = xray_images[1,:,:]
+        return(returned_image)
+    
     if which_image == '8970' or which_image == 'Cu_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        return(xray_images[2,:,:])
-
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        returned_image[:,:,0] = xray_images[2,:,:]
+        return(returned_image)
+    
     if which_image == '9050' or which_image == 'Cu_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        return(xray_images[3,:,:])
-
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        returned_image[:,:,0] = xray_images[3,:,:]
+        return(returned_image)
+    
     if which_image == 'all_thickness':
         return(np.stack((np.array(h5object['optical_thickness_Mn']),np.array(h5object['optical_thickness_Cu']),np.array(h5object['optical_thickness_Bi']),np.array(h5object['optical_thickness_C']),np.array(h5object['optical_thickness_El']))))
         
     if which_image == 'Mn_thickness' or which_image == 'Mn':
-        return(np.array(h5object['optical_thickness_Mn']))
+        im = np.array(h5object['optical_thickness_Mn'])
+        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image[:,:,0] = im[:,:]
+        return(returned_image)
         
     if which_image == 'Cu_thickness' or which_image == 'Cu':
-        return(np.array(h5object['optical_thickness_Cu']))
+        im = np.array(h5object['optical_thickness_Cu'])
+        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image[:,:,0] = im[:,:]
+        return(returned_image)
         
     if which_image == 'Bi_thickness' or which_image == 'Bi':
-        return(np.array(h5object['optical_thickness_Bi']))
+        im = np.array(h5object['optical_thickness_Bi'])
+        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image[:,:,0] = im[:,:]
+        return(returned_image)
         
     if which_image == 'C_thickness'  or which_image == 'C':
-        return(np.array(h5object['optical_thickness_C']))
+        im = np.array(h5object['optical_thickness_C'])
+        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image[:,:,0] = im[:,:]
+        return(returned_image)
         
     if which_image == 'El_thickness' or which_image == 'El':
-        return(np.array(h5object['optical_thickness_El']))
+        im = np.array(h5object['optical_thickness_El'])
+        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image[:,:,0] = im[:,:]
+        return(returned_image)
+        
+    if which_image == 'elemental_RGB':
+        returned_image = np.ones((im.shape[1],im.shape[2],3))
+        im = np.array(h5object['optical_thickness_Mn'])
+        returned_image[:,:,0] = im[:,:]
+        im = np.array(h5object['optical_thickness_Cu'])
+        returned_image[:,:,1] = im[:,:]
+        im = np.array(h5object['optical_thickness_Bi'])
+        returned_image[:,:,2] = im[:,:]
+        return(returned_image)
         
         
-        
-        
+    
         
         
     
@@ -1048,7 +1080,7 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
             im=get_raw_image(scan_numbers[i],'img_dark')
             im=im[0,:,:]
         if image_type_2_show != 'img_bkg1' and image_type_2_show != 'img_bkg2' and image_type_2_show != 'img_bkg' and image_type_2_show != 'img_dark':
-            im=get_processed_image(scan_numbers[i],image_type_2_show)
+            im=get_processed_image(scan_numbers[i],image_type_2_show)[:,:,0]
         
         im = im[510:-510,610:-610]
         images_mean[i] = np.mean(im[:])
@@ -1066,8 +1098,8 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     
     # Deflicker the 6520 eV image
-    target_image = get_processed_image(target_scan_number, '6520')
-    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6520')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6520')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6520')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6520')/5 
+    target_image = get_processed_image(target_scan_number, '6520')[:,:,0]
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6520')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6520')[:,:,0]/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6520')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6520')[:,:,0]/5 
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
@@ -1084,8 +1116,8 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     h5object['xray_images'][0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
      
     # Deflicker the 6600 eV image
-    target_image = get_processed_image(target_scan_number, '6600')
-    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6600')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6600')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6600')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6600')/5 
+    target_image = get_processed_image(target_scan_number, '6600')[:,:,0]
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6600')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6600')[:,:,0]/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6600')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6600')[:,:,0]/5 
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
@@ -1097,8 +1129,8 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     h5object['xray_images'][1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 8970 eV image
-    target_image = get_processed_image(target_scan_number, '8970')
-    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '8970')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '8970')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '8970')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '8970')/5 
+    target_image = get_processed_image(target_scan_number, '8970')[:,:,0]
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '8970')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[1], '8970')[:,:,0]/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '8970')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[3], '8970')[:,:,0]/5 
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
@@ -1110,8 +1142,8 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     h5object['xray_images'][2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 9050 eV image
-    target_image = get_processed_image(target_scan_number, '9050')
-    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '9050')/5 + get_processed_image(other_scan_numbers_in_baseline[1], '9050')/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '9050')/5 + get_processed_image(other_scan_numbers_in_baseline[3], '9050')/5 
+    target_image = get_processed_image(target_scan_number, '9050')[:,:,0]
+    baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '9050')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[1], '9050')[:,:,0]/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '9050')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[3], '9050')[:,:,0]/5 
     fractional_change = (target_image - baseline_image)/baseline_image
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
