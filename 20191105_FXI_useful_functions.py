@@ -763,37 +763,37 @@ def get_processed_image(filename,which_image):
         
     if which_image == 'Mn_thickness' or which_image == 'Mn':
         im = np.array(h5object['optical_thickness_Mn'])
-        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image = np.ones((im.shape[0],im.shape[1],1))
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'Cu_thickness' or which_image == 'Cu':
         im = np.array(h5object['optical_thickness_Cu'])
-        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image = np.ones((im.shape[0],im.shape[1],1))
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'Bi_thickness' or which_image == 'Bi':
         im = np.array(h5object['optical_thickness_Bi'])
-        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image = np.ones((im.shape[0],im.shape[1],1))
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'C_thickness'  or which_image == 'C':
         im = np.array(h5object['optical_thickness_C'])
-        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image = np.ones((im.shape[0],im.shape[1],1))
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'El_thickness' or which_image == 'El':
         im = np.array(h5object['optical_thickness_El'])
-        returned_image = np.ones((im.shape[1],im.shape[2],1))
+        returned_image = np.ones((im.shape[0],im.shape[1],1))
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'elemental_RGB':
         im = np.array(h5object['optical_thickness_Mn'])
-        returned_image = np.ones((im.shape[1],im.shape[2],3))
+        returned_image = np.ones((im.shape[0],im.shape[1],3))
         returned_image[:,:,0] = im[:,:]
         im = np.array(h5object['optical_thickness_Cu'])
         returned_image[:,:,1] = im[:,:]
