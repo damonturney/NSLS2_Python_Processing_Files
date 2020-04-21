@@ -403,6 +403,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
     debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
     im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
+    im_4_show = 1.0*im
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
