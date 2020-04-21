@@ -466,18 +466,6 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
             debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
             im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
-            # The new axis size:left, bottom,         width                                    ,   height
-            im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
-            im_axes.set_axis_off()
-            if image_used_for_plot == 'elemental_RGB':
-                zmin = np.ones(3)
-                zmax = np.ones(3)
-                zmin[0], zmax[0] = calculate_brightness_contrast(txm_scan_numbers, 'Mn', 0.005, 0.995)
-                zmin[1], zmax[1] = calculate_brightness_contrast(txm_scan_numbers, 'Cu', 0.005, 0.995)
-                zmin[2], zmax[2] = calculate_brightness_contrast(txm_scan_numbers, 'Bi', 0.005, 0.995)
-            else:
-                zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
-                zmin = [zmin]; zmax=[zmax]
             temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
             im_4_show[:,:,0] = temp    
             temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
