@@ -463,41 +463,41 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         if closest_index_txm != closest_index_txm_previous:
             closest_index_txm_previous=closest_index_txm
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
-        debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
-        im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
-        # The new axis size:left, bottom,         width                                    ,   height
-        im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
-        im_axes.set_axis_off()
-        if image_used_for_plot == 'elemental_RGB':
-            zmin = np.ones(3)
-            zmax = np.ones(3)
-            zmin[0], zmax[0] = calculate_brightness_contrast(txm_scan_numbers, 'Mn', 0.005, 0.995)
-            zmin[1], zmax[1] = calculate_brightness_contrast(txm_scan_numbers, 'Cu', 0.005, 0.995)
-            zmin[2], zmax[2] = calculate_brightness_contrast(txm_scan_numbers, 'Bi', 0.005, 0.995)
-        else:
-            zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
-            zmin = [zmin]; zmax=[zmax]
-        temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-        im_4_show[:,:,0] = temp    
-        temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-        im_4_show[:,:,1] = temp    
-        temp = (im[:,:,2] - zmin[2])/zmax[2]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-        im_4_show[:,:,2] = temp
-        # Make the scale bar
-        for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
-        im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
-        # Make the colorbar
-        for j in range(im.shape[2]): 
-            print(j)
-            im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-            if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-            im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
-            im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
-            im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
-            im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
-            im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
-        # Show the image
-        im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
+            debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
+            im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
+            # The new axis size:left, bottom,         width                                    ,   height
+            im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
+            im_axes.set_axis_off()
+            if image_used_for_plot == 'elemental_RGB':
+                zmin = np.ones(3)
+                zmax = np.ones(3)
+                zmin[0], zmax[0] = calculate_brightness_contrast(txm_scan_numbers, 'Mn', 0.005, 0.995)
+                zmin[1], zmax[1] = calculate_brightness_contrast(txm_scan_numbers, 'Cu', 0.005, 0.995)
+                zmin[2], zmax[2] = calculate_brightness_contrast(txm_scan_numbers, 'Bi', 0.005, 0.995)
+            else:
+                zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
+                zmin = [zmin]; zmax=[zmax]
+            temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
+            im_4_show[:,:,0] = temp    
+            temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
+            im_4_show[:,:,1] = temp    
+            temp = (im[:,:,2] - zmin[2])/zmax[2]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
+            im_4_show[:,:,2] = temp
+            # Make the scale bar
+            for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
+            im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
+            # Make the colorbar
+            for j in range(im.shape[2]): 
+                print(j)
+                im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
+                if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
+                im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
+                im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
+                im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
+                im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
+                im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
+            # Show the image
+            im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
             # Show the whole image
             im_axes.imshow(im, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
             # Show the image number
