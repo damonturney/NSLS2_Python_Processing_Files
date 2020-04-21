@@ -477,7 +477,6 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
             # Make the colorbar
             for j in range(im.shape[2]): 
-                print(j)
                 im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
                 if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
                 im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
@@ -487,8 +486,6 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
                 im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
             # Show the image
             im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
-            # Show the whole image
-            im_axes.imshow(im, cmap='gray',interpolation='none', vmin=zmin, vmax=zmax, label=False)
             # Show the image number
             im_id_text.set_text('img: ' + str(txm_scan_numbers[closest_index_txm]))           
             print('displaying img: ' + str(txm_scan_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
