@@ -1044,10 +1044,10 @@ def calculate_debuffer_multiple_images(ims, lossy='no'):
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
     for i in range(ims.shape[0]):
-        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,              0           )) )
-        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,              0           )) )
-        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,              0           )) )
+        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,              0           )) )
+        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
         if lossy == 'no':
             if debuffer[0]<debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
             if debuffer[1]>debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
@@ -1150,10 +1150,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     im_shape_cols = target_image.shape[1]
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
      
     # Deflicker the 6600 eV image
@@ -1163,10 +1163,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[1],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 8970 eV image
@@ -1176,10 +1176,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[2],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 9050 eV image
@@ -1189,10 +1189,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[3],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     h5object.close()
