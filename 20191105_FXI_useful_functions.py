@@ -232,7 +232,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
         filename2="%.4f" % scan_numbers[i]
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
-        h5object2.create_dataset('data_processing_note1', dtype=h5py.string_dtype(),'align_processed_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
+        h5object2.create_dataset('data_processing_note1', dtype=h5py.string_dtype(),data='align_processed_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
                 
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
