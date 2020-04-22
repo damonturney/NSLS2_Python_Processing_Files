@@ -139,6 +139,7 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
     h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
     h5object_new = h5py.File(data_directory+data_subdirectory+'processed_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
+    h5object_new.create_dataset("internally_align_h5_file(Mn_h5file,"+str(im2_cropping)+","+str(cc_search_distance)+","+str(average_dark_image_filename_Mn)+","+str(average_dark_image_filename_Cu)+")", (1,), dtype='i')
     h5object_old.copy('scan_id',  h5object_new)
     h5object_old.copy('note',     h5object_new)
     h5object_old.close()
@@ -231,16 +232,17 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
         filename2="%.4f" % scan_numbers[i]
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
+        h5object2.create_dataset("align_processed_images_time_series(scan_numbers,"+str(im2_cropping)+","+str(cc_search_distance)+")", (1,), dtype='i')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
                 
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
         debuffer = calculate_debuffer_multiple_images(np.concatenate((xanes_raw_ims1,xanes_raw_ims2),axis=0))
         
         #Find out how much translation to move each image
-        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
-        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
-        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
-        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , xanes_raw_ims2[3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation1, error1, cc_image = find_image_translation( xanes_raw_ims1[0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , xanes_raw_ims2[0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation2, error2, cc_image = find_image_translation( xanes_raw_ims1[1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , xanes_raw_ims2[1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation3, error3, cc_image = find_image_translation( xanes_raw_ims1[2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , xanes_raw_ims2[2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , im2_cropping, cc_search_distance)
+        translation4, error4, cc_image = find_image_translation( xanes_raw_ims1[3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , xanes_raw_ims2[3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] , im2_cropping, cc_search_distance)
 
         # Calculate the averaged shift to use (weighted by how much error ocurred on each calculation of the images translation)
         sum_inverse_errors = 1/error1 + 1/error2 + 1/error3 + 1/error4
@@ -303,6 +305,8 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
+    good_indices = calculate_debuffer_multiple_images(temp,lossy='yes')
+    ims[:,0:good_indices[2],:] = 0.1234567890123456;  ims[:,good_indices[3]+1:,:] = 0.1234567890123456; ims[:,:,0:good_indices[0]] = 0.1234567890123456; ims[:,:,good_indices[1]:] = 0.1234567890123456;
     ims[ims<=0.0]=np.median(ims[ims>0]) #so that np.log doesn't create an error
     
     # X-ray absorption coefficients in units of 1/mm 
@@ -402,7 +406,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     closest_index_txm_previous = -1
     im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
     debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
-    im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
+    im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
     im_4_show = 1.0*im
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
@@ -427,7 +431,6 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
     # Make the colorbar
     for j in range(im.shape[2]): 
-        print(j)
         im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
         if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
         im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
@@ -450,7 +453,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05])
     authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
-    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.5,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.15,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=7.8)           
     
@@ -465,7 +468,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             closest_index_txm_previous=closest_index_txm
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
             debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
-            im=im[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]]
+            im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
             temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
             im_4_show[:,:,0] = temp    
             temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
@@ -1009,11 +1012,11 @@ def debuffer_multiple_image_files(scan_numbers):
         if 'optical_thickness_El' in h5object_old.keys(): h5object_old.copy('optical_thickness_El', h5object_new)
         xanes_ims = np.array(h5object_old['xray_images'])
         h5object_old.close()
-        xanes_ims2 = np.zeros((4,      -debuffer[2]-1+debuffer[3] , -debuffer[0]-1+debuffer[1]),dtype=np.float32)
-        xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
-        xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]+1:debuffer[3] ,  debuffer[0]+1:debuffer[1]]
+        xanes_ims2 = np.zeros((4,      -debuffer[2]+debuffer[3] , -debuffer[0]+debuffer[1]),dtype=np.float32)
+        xanes_ims2[0,:,:] = xanes_ims[0,debuffer[2]:debuffer[3] ,  debuffer[0]:debuffer[1]]
+        xanes_ims2[1,:,:] = xanes_ims[1,debuffer[2]:debuffer[3] ,  debuffer[0]:debuffer[1]]
+        xanes_ims2[2,:,:] = xanes_ims[2,debuffer[2]:debuffer[3] ,  debuffer[0]:debuffer[1]]
+        xanes_ims2[3,:,:] = xanes_ims[3,debuffer[2]:debuffer[3] ,  debuffer[0]:debuffer[1]]
         h5object_new.create_dataset('xray_images', shape=xanes_ims2.shape,  dtype=np.float32, data=xanes_ims2)
         h5object_new.close()
         os.remove(data_directory+data_subdirectory+filename)
@@ -1026,31 +1029,40 @@ def debuffer_multiple_image_files(scan_numbers):
 
 
 
-    
-def calculate_debuffer_multiple_images(ims):
+                                           #lossy = 'yes' means you keep ONLY the pixels for which ALL images contained data.
+def calculate_debuffer_multiple_images(ims, lossy='no'):
     debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
-    debuffer_all_images=[100000,0,100000,0] 
+    if lossy == 'no':
+        debuffer_all_images=[100000,0,100000,0]
+    else:
+        debuffer_all_images=[0,100000,0,100000]
     if ims.ndim == 2: ims=np.stack((ims,ims))  #In case the user gives a single image
     im_shape_rows = ims.shape[1]
     im_shape_cols = ims.shape[2]
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
     for i in range(ims.shape[0]):
-        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456),              0           )) )
-        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
-        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456),              0           )) )
-        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456),im_shape_rows-im_half_rows-1)) ) + im_half_rows
-        if debuffer[0]<debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
-        if debuffer[1]>debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
-        if debuffer[2]<debuffer_all_images[2]: debuffer_all_images[2]=debuffer[2]
-        if debuffer[3]>debuffer_all_images[3]: debuffer_all_images[3]=debuffer[3]
+        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,              0           )) )
+        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,              0           )) )
+        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+        if lossy == 'no':
+            if debuffer[0]<debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
+            if debuffer[1]>debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
+            if debuffer[2]<debuffer_all_images[2]: debuffer_all_images[2]=debuffer[2]
+            if debuffer[3]>debuffer_all_images[3]: debuffer_all_images[3]=debuffer[3]
+        else:
+            if debuffer[0]>debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
+            if debuffer[1]<debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
+            if debuffer[2]>debuffer_all_images[2]: debuffer_all_images[2]=debuffer[2]
+            if debuffer[3]<debuffer_all_images[3]: debuffer_all_images[3]=debuffer[3]
         
     return(debuffer_all_images)
 
 
     
     
-def calculate_image_debuffer_multiple_files(scan_numbers):
+def calculate_image_debuffer_multiple_files(scan_numbers, lossy='no'):
     debuffer_multi_file = [100000,0,100000,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
     
     for i in range(0,len(scan_numbers)):
@@ -1059,7 +1071,7 @@ def calculate_image_debuffer_multiple_files(scan_numbers):
         h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')        
         xanes_raw_ims = np.array(h5object['xray_images'])
         h5object.close()
-        debuffer = calculate_debuffer_multiple_images(xanes_raw_ims)
+        debuffer = calculate_debuffer_multiple_images(xanes_raw_ims,lossy)
         if debuffer[0]<debuffer_multi_file[0]: debuffer_multi_file[0]=debuffer[0]
         if debuffer[1]>debuffer_multi_file[1]: debuffer_multi_file[1]=debuffer[1]
         if debuffer[2]<debuffer_multi_file[2]: debuffer_multi_file[2]=debuffer[2]
@@ -1136,11 +1148,11 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     im_shape_cols = target_image.shape[1]
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456),im_shape_rows-im_half_rows-1)) ) + im_half_rows
-    h5object['xray_images'][0,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    h5object['xray_images'][0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
      
     # Deflicker the 6600 eV image
     target_image = get_processed_image(target_scan_number, '6600')[:,:,0]
@@ -1149,11 +1161,11 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[1],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456),im_shape_rows-im_half_rows-1)) ) + im_half_rows
-    h5object['xray_images'][1,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    h5object['xray_images'][1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 8970 eV image
     target_image = get_processed_image(target_scan_number, '8970')[:,:,0]
@@ -1162,11 +1174,11 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[2],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456),im_shape_rows-im_half_rows-1)) ) + im_half_rows
-    h5object['xray_images'][2,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    h5object['xray_images'][2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     # Deflicker the 9050 eV image
     target_image = get_processed_image(target_scan_number, '9050')[:,:,0]
@@ -1175,11 +1187,11 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[3],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456),im_shape_cols-im_half_cols-1)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456),             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456),im_shape_rows-im_half_rows-1)) ) + im_half_rows
-    h5object['xray_images'][3,debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    h5object['xray_images'][3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]+1:debuffer[3],debuffer[0]+1:debuffer[1]])
     
     h5object.close()
     
