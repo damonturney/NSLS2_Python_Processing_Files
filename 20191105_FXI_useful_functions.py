@@ -232,7 +232,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
         filename2="%.4f" % scan_numbers[i]
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
-        h5object2.create_dataset('data_processing_note1', dtype=h5py.string_dtype(),data='align_processed_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
+        h5object2.create_dataset('data_processing_note2', dtype=h5py.string_dtype(),data='align_processed_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
                 
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
@@ -718,13 +718,13 @@ def read_FXI_processed_h5_metadata(filename):  #filename can be 34567.0103  to d
     scan_time   = np.array(h5object['scan_time'])  #scan start time in local time at NSLS2, in epoch format
     scan_id     = np.array(h5object['scan_id'])
     notes       = str(np.array(h5object['note']))
-    data_processing_notes1 = str(np.array(h5object['data_processing_notes1'])) if 'data_processing_notes1' in h5object.keys() else '' 
-    data_processing_notes2 = str(np.array(h5object['data_processing_notes2'])) if 'data_processing_notes2' in h5object.keys() else '' 
+    data_processing_note1 = str(np.array(h5object['data_processing_note1'])) if 'data_processing_note1' in h5object.keys() else '' 
+    data_processing_note2 = str(np.array(h5object['data_processing_note2'])) if 'data_processing_note2' in h5object.keys() else '' 
     translations= np.array(h5object['translations'])
     scan_start_time = datetime.datetime.fromtimestamp(scan_time)
     scan_start_time_string = datetime.datetime.strftime(scan_start_time, '%Y-%m-%d %H:%M:%S' )    
     h5object.close() 
-    return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations, data_processing_notes1, data_processing_notes2)
+    return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations, data_processing_note1, data_processing_note2)
 
 
 
