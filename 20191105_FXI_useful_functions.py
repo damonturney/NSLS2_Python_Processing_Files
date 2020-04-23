@@ -468,6 +468,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
             debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
             im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
+            im_4_show = 1.0*im
             # Adjust the Brightnewss & Contraast
             for j in range(im.shape[2]):
                 temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
