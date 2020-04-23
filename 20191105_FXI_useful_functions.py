@@ -305,7 +305,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
-    good_indices = calculate_debuffer_multiple_images(temp,lossy='yes')
+    good_indices = calculate_debuffer_multiple_images(ims,lossy='yes')
     ims[:,0:good_indices[2],:] = 0.1234567890123456;  ims[:,good_indices[3]:,:] = 0.1234567890123456; ims[:,:,0:good_indices[0]] = 0.1234567890123456; ims[:,:,good_indices[1]:] = 0.1234567890123456;
     ims[ims<=0.0]=np.median(ims[ims>0]) #so that np.log doesn't create an error
     
