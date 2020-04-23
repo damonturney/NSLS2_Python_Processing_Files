@@ -420,12 +420,10 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     else:
         zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
         zmin = [zmin]; zmax=[zmax]
-    temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-    im_4_show[:,:,0] = temp    
-    temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-    im_4_show[:,:,1] = temp    
-    temp = (im[:,:,2] - zmin[2])/zmax[2]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-    im_4_show[:,:,2] = temp
+    # Adjust the Brightnewss & Contraast
+    for j in range(im.shape[2]):
+        temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
+        im_4_show[:,:,j] = temp    
     # Make the scale bar
     for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
     im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
@@ -469,12 +467,10 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
             debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
             im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
-            temp = (im[:,:,0] - zmin[0])/zmax[0]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-            im_4_show[:,:,0] = temp    
-            temp = (im[:,:,1] - zmin[1])/zmax[1]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-            im_4_show[:,:,1] = temp    
-            temp = (im[:,:,2] - zmin[2])/zmax[2]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
-            im_4_show[:,:,2] = temp
+            # Adjust the Brightnewss & Contraast
+            for j in range(im.shape[2]):
+                temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
+                im_4_show[:,:,j] = temp 
             # Make the scale bar
             for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
             im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
