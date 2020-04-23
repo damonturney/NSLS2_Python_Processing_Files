@@ -437,6 +437,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
         im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
     # Show the image
+    if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
     im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
     # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
@@ -484,6 +485,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
                 im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
                 im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
             # Show the image
+            if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
             im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
             # Show the image number
             im_id_text.set_text('img: ' + str(txm_scan_numbers[closest_index_txm]))           
