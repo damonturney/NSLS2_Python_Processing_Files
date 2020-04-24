@@ -746,11 +746,6 @@ def get_processed_image(filename,which_image):
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')
-#    optical_thickness_Mn= np.array(h5object['optical_thickness_Mn'])
-#    optical_thickness_Cu= np.array(h5object['optical_thickness_Cu'])
-#    optical_thickness_Bi= np.array(h5object['optical_thickness_Bi'])
-#    optical_thickness_C = np.array(h5object['optical_thickness_C'])
-#    optical_thickness_El= np.array(h5object['optical_thickness_El'])
     
     if which_image == 'all':
         xray_images = np.array(h5object['xray_images'])
@@ -759,77 +754,91 @@ def get_processed_image(filename,which_image):
         optical_thickness_Bi = np.array(h5object['optical_thickness_Bi'])
         optical_thickness_C  = np.array(h5object['optical_thickness_C'])
         optical_thickness_El = np.array(h5object['optical_thickness_El'])
+        h5object.close()
         return(np.stack((xray_images,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
     
     if which_image == 'xray_images':
         xray_images = np.array(h5object['xray_images'])
+        h5object.close()
         return(xray_images)
 
     if which_image == '6520' or which_image == 'Mn_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        h5object.close()
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[0,:,:]
         return(returned_image)
 
     if which_image == '6600' or which_image == 'Mn_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        h5object.close()
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[1,:,:]
         return(returned_image)
     
     if which_image == '8970' or which_image == 'Cu_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        h5object.close()
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[2,:,:]
         return(returned_image)
     
     if which_image == '9050' or which_image == 'Cu_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1))
+        h5object.close()
+        returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[3,:,:]
         return(returned_image)
     
     if which_image == 'all_thickness':
-        return(np.stack((np.array(h5object['optical_thickness_Mn']),np.array(h5object['optical_thickness_Cu']),np.array(h5object['optical_thickness_Bi']),np.array(h5object['optical_thickness_C']),np.array(h5object['optical_thickness_El']))))
+        temp = np.stack((np.array(h5object['optical_thickness_Mn']),np.array(h5object['optical_thickness_Cu']),np.array(h5object['optical_thickness_Bi']),np.array(h5object['optical_thickness_C']),np.array(h5object['optical_thickness_El'])))
+        h5object.close()
+        return(temp)
         
     if which_image == 'Mn_thickness' or which_image == 'Mn' or which_image == 'optical_thickness_Mn':
         im = np.array(h5object['optical_thickness_Mn'])
-        returned_image = np.ones((im.shape[0],im.shape[1],1))
+        h5object.close()
+        returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'Cu_thickness' or which_image == 'Cu' or which_image == 'optical_thickness_Cu':
         im = np.array(h5object['optical_thickness_Cu'])
-        returned_image = np.ones((im.shape[0],im.shape[1],1))
+        h5object.close()
+        returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'Bi_thickness' or which_image == 'Bi' or which_image == 'optical_thickness_Bi':
         im = np.array(h5object['optical_thickness_Bi'])
-        returned_image = np.ones((im.shape[0],im.shape[1],1))
+        h5object.close()
+        returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'C_thickness'  or which_image == 'C' or which_image == 'optical_thickness_C':
         im = np.array(h5object['optical_thickness_C'])
-        returned_image = np.ones((im.shape[0],im.shape[1],1))
+        h5object.close()
+        returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'El_thickness' or which_image == 'El' or which_image == 'optical_thickness_El':
         im = np.array(h5object['optical_thickness_El'])
-        returned_image = np.ones((im.shape[0],im.shape[1],1))
+        h5object.close()
+        returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'elemental_RGB':
         im = np.array(h5object['optical_thickness_Mn'])
-        returned_image = np.ones((im.shape[0],im.shape[1],3))
+        returned_image = np.ones((im.shape[0],im.shape[1],3),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         im = np.array(h5object['optical_thickness_Cu'])
         returned_image[:,:,1] = im[:,:]
         im = np.array(h5object['optical_thickness_Bi'])
         returned_image[:,:,2] = im[:,:]
+        h5object.close()
         return(returned_image)
         
         
@@ -1135,7 +1144,6 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,gaussian_filter_sizes):
     filename_string ="%.4f" % target_scan_number
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
-    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     
     # Deflicker the 6520 eV image
     target_image = get_processed_image(target_scan_number, '6520')[:,:,0]
@@ -1144,17 +1152,11 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[0],mode='reflect')
-    debuffer = np.array([0,0,0,0],dtype=np.int)
-    im_shape_rows = target_image.shape[0]
-    im_shape_cols = target_image.shape[1]
-    im_half_rows = np.int(im_shape_rows/2)
-    im_half_cols = np.int(im_shape_cols/2)
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer = calculate_debuffer_multiple_images(np.expand_dims(target_image,axis=0))
+    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     h5object['xray_images'][0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
-     
+    h5object.close()
+    
     # Deflicker the 6600 eV image
     target_image = get_processed_image(target_scan_number, '6600')[:,:,0]
     baseline_image = get_processed_image(other_scan_numbers_in_baseline[0], '6600')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[1], '6600')[:,:,0]/5 + target_image/5 + get_processed_image(other_scan_numbers_in_baseline[2], '6600')[:,:,0]/5 + get_processed_image(other_scan_numbers_in_baseline[3], '6600')[:,:,0]/5 
@@ -1162,11 +1164,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[1],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer = calculate_debuffer_multiple_images(np.expand_dims(target_image,axis=0))    
+    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     h5object['xray_images'][1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
+    h5object.close()
     
     # Deflicker the 8970 eV image
     target_image = get_processed_image(target_scan_number, '8970')[:,:,0]
@@ -1175,11 +1176,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[2],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer = calculate_debuffer_multiple_images(np.expand_dims(target_image,axis=0))
+    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     h5object['xray_images'][2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
+    h5object.close()
     
     # Deflicker the 9050 eV image
     target_image = get_processed_image(target_scan_number, '9050')[:,:,0]
@@ -1188,11 +1188,9 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[3],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer = calculate_debuffer_multiple_images(np.expand_dims(target_image,axis=0))
+    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
     h5object['xray_images'][3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
-    
     h5object.close()
+    
     
