@@ -161,16 +161,16 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
         Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[1,:,:] - average_dark_image_Mn)
     translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
-    Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
-    Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
+    Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+    Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
     # Now actually do the  shift.  Use -translation to put it back to where it should be (aligned with im1)
     Mn_im2_buffered_aligned = shift_image_integer(Mn_im2_buffered, -translation1)
-    #Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    #Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.12345678, prefilter=True)
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.1234567890123456
-    Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
-    Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.1234567890123456
-    Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
+    Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.12345678
+    Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+    Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.12345678
+    Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
     
     # Shift the Cu images to be aligned with the 1st Mn image
     Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
@@ -185,23 +185,23 @@ def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, aver
     translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
     translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
     # Add a buffer of dummy values so that we don't lose data when we shift
-    Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
-    Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.1234567890123456 ) 
+    Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+    Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
     # Now actually do the  shift
     Cu_im1_buffered_aligned = shift_image_integer(Cu_im1_buffered, -translation2)
     Cu_im2_buffered_aligned = shift_image_integer(Cu_im2_buffered, -translation3)
-    #Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-    #Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
+    #Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.12345678, prefilter=True)
+    #Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.12345678, prefilter=True)
 
     # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.1234567890123456
-    Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation2[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
-    Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(-translation2[0])),:] = 0.1234567890123456
-    Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(-translation2[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation3[1]))] = 0.1234567890123456
-    Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation3[1])) + Mn_ims[0,:,:].shape[1]:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation3[0])),:] = 0.1234567890123456
-    Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation3[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.1234567890123456
+    Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.12345678
+    Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation2[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+    Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(-translation2[0])),:] = 0.12345678
+    Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(-translation2[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
+    Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation3[1]))] = 0.12345678
+    Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation3[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+    Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation3[0])),:] = 0.12345678
+    Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation3[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
     
     # Collect an concatenate the data into single matrices
     beam_energies = np.concatenate((beam_energies_Mn, beam_energies_Cu))
@@ -263,10 +263,10 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
         im2_2 = shift_image_integer(xanes_raw_ims2[1,:,:], -translation)
         im2_3 = shift_image_integer(xanes_raw_ims2[2,:,:], -translation)
         im2_4 = shift_image_integer(xanes_raw_ims2[3,:,:], -translation)
-        #im2_1 = scipy.ndimage.shift(xanes_raw_ims2[0,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        #im2_2 = scipy.ndimage.shift(xanes_raw_ims2[1,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        #im2_3 = scipy.ndimage.shift(xanes_raw_ims2[2,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)
-        #im2_4 = scipy.ndimage.shift(xanes_raw_ims2[3,:,:], -translation, order=3, mode='constant', cval=0.1234567890123456, prefilter=True)       
+        #im2_1 = scipy.ndimage.shift(xanes_raw_ims2[0,:,:], -translation, order=3, mode='constant', cval=0.12345678, prefilter=True)
+        #im2_2 = scipy.ndimage.shift(xanes_raw_ims2[1,:,:], -translation, order=3, mode='constant', cval=0.12345678, prefilter=True)
+        #im2_3 = scipy.ndimage.shift(xanes_raw_ims2[2,:,:], -translation, order=3, mode='constant', cval=0.12345678, prefilter=True)
+        #im2_4 = scipy.ndimage.shift(xanes_raw_ims2[3,:,:], -translation, order=3, mode='constant', cval=0.12345678, prefilter=True)       
         temp_matrix = h5object2['xray_images']
         temp_matrix[...] = np.stack((im2_1,im2_2,im2_3,im2_4)) # stupid ass python requires this [...] notation if you want to write data to the h5 file
         #h5object2.create_dataset('xray_images2', shape=(4,im_shape_rows,im_shape_cols), dtype=np.float32, data=np.stack((im2_1,im2_2,im2_3,im2_4)))
@@ -306,8 +306,8 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
     good_indices = calculate_debuffer_multiple_images(ims,lossy='yes')
-    ims[:,0:good_indices[2],:] = 0.1234567890123456;  ims[:,good_indices[3]:,:] = 0.1234567890123456; ims[:,:,0:good_indices[0]] = 0.1234567890123456; ims[:,:,good_indices[1]:] = 0.1234567890123456;
-    ims[ims<=0.0]=np.median(ims[ims>0]) #so that np.log doesn't create an error
+    ims[:,0:good_indices[2],:] = 0.12345678;  ims[:,good_indices[3]:,:] = 0.12345678; ims[:,:,0:good_indices[0]] = 0.12345678; ims[:,:,good_indices[1]:] = 0.12345678;
+    ims[ims<=0.0]=0.0000001 #so that np.log doesn't create an error
     
     # X-ray absorption coefficients in units of 1/mm 
     a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
@@ -333,10 +333,10 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     
     b = np.zeros((3,1))
     
-    optical_thickness_Cu=np.zeros(ims[0,:,:].shape,dtype=np.float32)   #All length units in mm
-    optical_thickness_Mn=np.zeros(ims[0,:,:].shape,dtype=np.float32)
-    optical_thickness_Bi=np.zeros(ims[0,:,:].shape,dtype=np.float32)
-    optical_thickness_El=np.zeros(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_Cu=np.ones(ims[0,:,:].shape,dtype=np.float32)   #All length units in mm
+    optical_thickness_Mn=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_Bi=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_El=np.ones(ims[0,:,:].shape,dtype=np.float32)
     optical_thickness_C= np.ones(ims[0,:,:].shape,dtype=np.float32)*carbon_thickness   # in units of mm. This is set in stone, not optimized. I have the two PMMA films plus the carbon foil inside  I can't remember how thick the PMMA films are
     
     
@@ -436,8 +436,8 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
         im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
         im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
-    # Show the image
     if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
+    # Show the image
     im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
     # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
@@ -974,7 +974,7 @@ def shift_image_integer(im_old,translation):  # Filename MUST be supplied as a n
     translation = [np.int(np.round(translation[0])), np.int(np.round(translation[1])), ]
 
     #Create the buffered images
-    im_new = np.ones(im_old.shape)*0.1234567890123456
+    im_new = np.ones(im_old.shape)*0.12345678
     
     #Now let's actually shift the image 
     if translation[0]== 0  and translation[1]== 0:  im_new[  translation[0]:,  translation[1]:] = im_old[  translation[0]:,  translation[1]:];       
@@ -1031,22 +1031,22 @@ def debuffer_multiple_image_files(scan_numbers):
 
 
                                            #lossy = 'yes' means you keep ONLY the pixels for which ALL images contained data.
-def calculate_debuffer_multiple_images(ims, lossy='no'):
+def calculate_debuffer_multiple_images(ims, lossy='no'):  # ims must be a n x i x j array where n is the number of images
+    if ims.ndim == 2: ims=np.stack((ims,ims))  #In case the user gives a single image
     debuffer = [0,0,0,0]  # debuffer[0] is how many LHS dummy columns.  debuffer[1] is how many RHS dummy columns.  debuffer[2] is how many topside dummy rows.  debuffer[3] is how many bottomside dummy rows.  
     if lossy == 'no':
         debuffer_all_images=[100000,0,100000,0]
     else:
         debuffer_all_images=[0,100000,0,100000]
-    if ims.ndim == 2: ims=np.stack((ims,ims))  #In case the user gives a single image
     im_shape_rows = ims.shape[1]
     im_shape_cols = ims.shape[2]
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
     for i in range(ims.shape[0]):
-        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,              0           )) )
-        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,              0           )) )
-        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+        debuffer[0] = int( np.max(np.append(np.where(ims[i,  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,              0           )) )
+        debuffer[1] = int( np.min(np.append(np.where(ims[i,  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+        debuffer[2] = int( np.max(np.append(np.where(ims[i,0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,              0           )) )
+        debuffer[3] = int( np.min(np.append(np.where(ims[i,  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
         if lossy == 'no':
             if debuffer[0]<debuffer_all_images[0]: debuffer_all_images[0]=debuffer[0]
             if debuffer[1]>debuffer_all_images[1]: debuffer_all_images[1]=debuffer[1]
@@ -1131,7 +1131,7 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 
 
 
-       # there must be four scan numbers in other_scan_numbers_in_baseline
+       # there must be four scan numbers in the input variable ----> other_scan_numbers_in_baseline
 def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,gaussian_filter_sizes):
     filename_string ="%.4f" % target_scan_number
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
@@ -1149,10 +1149,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     im_shape_cols = target_image.shape[1]
     im_half_rows = np.int(im_shape_rows/2)
     im_half_cols = np.int(im_shape_cols/2)
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][0,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
      
     # Deflicker the 6600 eV image
@@ -1162,10 +1162,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[1],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][1,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
     
     # Deflicker the 8970 eV image
@@ -1175,10 +1175,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[2],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][2,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
     
     # Deflicker the 9050 eV image
@@ -1188,10 +1188,10 @@ def deflicker_one_scan_file(target_scan_number, other_scan_numbers_in_baseline,g
     fractional_change[fractional_change> 0.5] = 0.0
     fractional_change[fractional_change<-0.5] = 0.0
     blurred_fractional_change = scipy.ndimage.gaussian_filter(fractional_change,sigma=gaussian_filter_sizes[3],mode='reflect')
-    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.1234567890123456)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
-    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.1234567890123456)[0]+1,             0            )) )
-    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.1234567890123456)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
+    debuffer[0] = int( np.max(np.append(np.where(target_image[  im_half_rows ,0:im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[1] = int( np.min(np.append(np.where(target_image[  im_half_rows ,  im_half_cols:]==0.12345678)[0]+0,im_shape_cols-im_half_cols)) ) + im_half_cols
+    debuffer[2] = int( np.max(np.append(np.where(target_image[0:im_half_rows ,  im_half_cols ]==0.12345678)[0]+1,             0            )) )
+    debuffer[3] = int( np.min(np.append(np.where(target_image[  im_half_rows:,  im_half_cols ]==0.12345678)[0]+0,im_shape_rows-im_half_rows)) ) + im_half_rows
     h5object['xray_images'][3,debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] = target_image[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]] / (1.0 + blurred_fractional_change[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]])
     
     h5object.close()
