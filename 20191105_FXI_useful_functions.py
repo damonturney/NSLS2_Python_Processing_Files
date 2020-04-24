@@ -70,7 +70,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
 # align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
 # debuffer_multiple_image_files(scan_numbers):
-# deflickering_time_series():
+# deflicker_time_series():
 # calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
 # make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
 # make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
@@ -278,7 +278,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
 
   
   
-def deflickering_time_series(scan_numbers,gaussian_filter_sizes):
+def deflicker_time_series(scan_numbers,gaussian_filter_sizes):
     i=0
     print('de-flickering ' + str(scan_numbers[i])) 
     deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes)
@@ -497,7 +497,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, bitrate=5000)
+    writer = Writer(fps=15, bitrate=10000)
     animation_handle.save(output_filename, writer=writer)
     plt.close()
 
