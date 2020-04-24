@@ -452,7 +452,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05])
     authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
-    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.15,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.85,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=7.8)           
     
@@ -497,7 +497,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, bitrate=50000)
+    writer = Writer(fps=15, bitrate=200000)
     animation_handle.save(output_filename, writer=writer)
     plt.close()
 
