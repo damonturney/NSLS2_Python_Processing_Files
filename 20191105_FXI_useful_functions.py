@@ -495,9 +495,9 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', vmin=0.235, vmax=0.94)
         
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
+    # It uses FFMPEG (https://www.ffmpeg.org/ffmpeg-codecs.html#libvpx) to access video codecs.  I think by default it uses the h.264.  vpxenc (called libvpx by FFMPEG) which is explained here https://www.webmproject.org/docs/encoder-parameters/
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, codec='libx264', extra_args=[ '-crf', '0'])  #codec='libx264')#,
+    writer = animation.FFMpegFileWriter(fps=15, codec='libopenh264')  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
     animation_handle.save(output_filename, writer=writer)
     plt.close()
 
