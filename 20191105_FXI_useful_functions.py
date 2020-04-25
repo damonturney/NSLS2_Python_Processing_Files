@@ -496,9 +496,11 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         
     # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    writer = animation.FFMpegFileWriter(fps=15, bitrate=10000, codec='libx264', extra_args=[ '-crf', '18'])
-    animation_handle.save('output_filename', writer=writer)
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=15, bitrate=2000)   #codec='libx264')#, extra_args=[ '-crf', '18'])
+    animation_handle.save(output_filename, writer=writer)
     plt.close()
+
 
 
 
