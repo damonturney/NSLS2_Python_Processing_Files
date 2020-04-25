@@ -351,9 +351,11 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
             b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
             
             temp = np.linalg.solve(A, b)
-            optical_thickness_Mn[m,n] = np.float32(temp[0])  #this produces optical thickness in mm    
-            optical_thickness_Cu[m,n] = np.float32(temp[1])  #this produces optical thickness in mm
-            optical_thickness_Bi[m,n] = np.float32(temp[2])  #this produces optical thickness in mm         
+            optical_thickness_Mn[m,n] = np.float32(temp[0])*1000.0  #this produces optical thickness in microns 
+            optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0  #this produces optical thickness in microns
+            optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0  #this produces optical thickness in microns 
+            total_thickness = total_thickness*1000.0                #this produces optical thickness in microns 
+            optical_thickness_C = optical_thickness_C*1000.0        #this produces optical thickness in microns 
             optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
             sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
             
@@ -405,12 +407,13 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     global closest_index_txm_previous
     closest_index_txm_previous = -1
     im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
-    debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
-    im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
+    #debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
+    #im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
     im_4_show = 1.0*im
     # The new axis size:left, bottom,         width                                    ,   height
     im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
     im_axes.set_axis_off()
+    # Adjust the Brightnewss & Contrast
     if image_used_for_plot == 'elemental_RGB':
         zmin = np.ones(3)
         zmax = np.ones(3)
@@ -420,14 +423,13 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     else:
         zmin, zmax = calculate_brightness_contrast(txm_scan_numbers, image_used_for_plot, 0.005, 0.995)
         zmin = [zmin]; zmax=[zmax]
-    # Adjust the Brightnewss & Contraast
     for j in range(im.shape[2]):
         temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
         im_4_show[:,:,j] = temp    
-    # Make the scale bar
+    # Paint the scale bar onto the im_4_show image
     for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
     im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
-    # Make the colorbar
+    # Paint the colorbar onto the im_4_show image
     for j in range(im.shape[2]): 
         im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
         if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
@@ -435,21 +437,21 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
         im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
         im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
-        im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
+        im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]) + '                   ' + "%.1f" % (zmax[j]),fontsize=6.5)
     if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
     # Show the image
-    im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
+    im_show_handle = im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
     # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
     iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 8)    
-    iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000,zorder=0)
+    iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000)
     iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
     y_range = iV_data_axes.get_ylim()[1] - iV_data_axes.get_ylim()[0]
     iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
-    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05])
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05],zorder=2)
     authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.85,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
@@ -466,17 +468,14 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         if closest_index_txm != closest_index_txm_previous:
             closest_index_txm_previous=closest_index_txm
             im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
-            debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
-            im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
             im_4_show = 1.0*im
             # Adjust the Brightnewss & Contraast
             for j in range(im.shape[2]):
                 temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
                 im_4_show[:,:,j] = temp 
-            # Make the scale bar
+            # Paint the scale bar onto the im_4_show image
             for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
-            im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
-            # Make the colorbar
+            # Paint the colorbar onto the im_4_show image
             for j in range(im.shape[2]): 
                 im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
                 if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
@@ -484,22 +483,20 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
                 im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
                 im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
                 im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
-                im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]*1000) + '                   ' + "%.1f" % (zmax[j]*1000),fontsize=6.5)
             # Show the image
             if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
-            im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
-            # Show the image number
-            im_id_text.set_text('img: ' + str(txm_scan_numbers[closest_index_txm]))           
-            print('displaying img: ' + str(txm_scan_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
+            im_show_handle.set_data(im_4_show)
+            # Print the image number next to the image
+            im_id_text.set_text('scan: ' + str(txm_scan_numbers[closest_index_txm]))           
+            print('displaying scan: ' + str(txm_scan_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
 
-        #big_axes_han.imshow(images[int((frame_num-1)/6)],cmap='gray',interpolation='none', vmin=0.235, vmax=0.94)
         
-    # It iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
-    # It uses FFMPEG (https://www.ffmpeg.org/ffmpeg-codecs.html#libvpx) to access video codecs.  I think by default it uses the h.264.  vpxenc (called libvpx by FFMPEG) which is explained here https://www.webmproject.org/docs/encoder-parameters/
+    # The animation iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
+    # The animation uses FFMPEG (https://www.ffmpeg.org/ffmpeg-codecs.html#libvpx) to access video codecs.  I think by default it uses the h.264.  vpxenc (called libvpx by FFMPEG) which is explained here https://www.webmproject.org/docs/encoder-parameters/
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    writer = animation.FFMpegFileWriter(fps=15, codec='libopenh264')  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
+    writer = animation.FFMpegWriter(fps=15,bitrate=100000)  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
     animation_handle.save(output_filename, writer=writer)
-    plt.close()
+
 
 
 
@@ -620,6 +617,7 @@ def calculate_brightness_contrast(filenumbers, image_2_display, low_end_percenti
             image = image[0,:,:]
         if image_2_display != 'img_bkg1' and image_2_display != 'img_bkg2' and image_2_display != 'img_dark' and image_2_display != 'img_bkg':
             image = get_processed_image(filenumbers[i],image_2_display)[:,:,0]
+        image[image==0.12345678] = np.median(image)
         pdf,bin_edges=np.histogram(image[:],bins=200, range=(np.min(image[:]),np.max(image[:])),density=True)
         cumulative_probability_distribution = np.cumsum(pdf)
         cumulative_probability_distribution = cumulative_probability_distribution/cumulative_probability_distribution[-1]
