@@ -305,7 +305,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
-    ims[ims<=0.0]=0.0000001 #so that np.log doesn't create an error
+    ims[ims<=0.0]=0.00001 #so that np.log doesn't create an error
     
     # X-ray absorption coefficients in units of 1/mm 
     a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
@@ -332,14 +332,14 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     b = np.zeros((3,1))
     
     # Create some empty arrays
-    optical_thickness_Cu=np.ones(ims[0,:,:].shape,dtype=np.float32)    
     optical_thickness_Mn=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    optical_thickness_Cu=np.ones(ims[0,:,:].shape,dtype=np.float32)    
     optical_thickness_Bi=np.ones(ims[0,:,:].shape,dtype=np.float32)
     optical_thickness_El=np.ones(ims[0,:,:].shape,dtype=np.float32)
     optical_thickness_C= np.ones(ims[0,:,:].shape,dtype=np.float32)*carbon_thickness   # in units of mm. This is set in stone, not optimized. I have the two PMMA films plus the carbon foil inside  I can't remember how thick the PMMA films are
     
     
-    for m in range(0,ims[0,:,:].shape[0]):
+    for m in range(0,100):#ims[0,:,:].shape[0]):
         if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
         sys.stdout.flush()
         for n in range(0,ims[0,:,:].shape[1]): 
@@ -352,10 +352,10 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
                 
                 temp = np.linalg.solve(A, b)
                 #the above calculation produces optical thickness in mm, but below I convert it to microns!!!!
+                optical_thickness_Mn[m,n] = np.float32(temp[0])*1000.0
                 optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0
                 optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0
-                total_thickness = total_thickness*1000.0              
-                optical_thickness_C = optical_thickness_C*1000.0      
+                optical_thickness_C[m,n]  = carbon_thickness*1000.0      
                 optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
             else:
                 #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
