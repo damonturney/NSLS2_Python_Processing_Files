@@ -1188,7 +1188,7 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
     fixed_image[mask] = 0.12345678
     
     h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
-    h5object['xray_images'] = fixed_image
+    h5object['xray_images'][...] = fixed_image
     h5object.close()
     
 
