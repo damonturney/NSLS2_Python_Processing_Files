@@ -339,7 +339,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     optical_thickness_C= np.ones(ims[0,:,:].shape,dtype=np.float32)*carbon_thickness   # in units of mm. This is set in stone, not optimized. I have the two PMMA films plus the carbon foil inside  I can't remember how thick the PMMA films are
     
     
-    for m in range(0,100):#ims[0,:,:].shape[0]):
+    for m in range(0,ims[0,:,:].shape[0]):
         if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
         sys.stdout.flush()
         for n in range(0,ims[0,:,:].shape[1]): 
