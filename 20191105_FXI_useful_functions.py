@@ -1142,13 +1142,15 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
     #If the elements are supposed to be removed from the image, remove them now
     if remove_elements == 'yes':
         elemental_thicknesses_target_image = get_processed_image(target_scan_number,'elemental_RGB')
+        # elemental_thicknesses_target_image[]
         # X-ray absorption coefficients in units of 1/mm 
         a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
         a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
         a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
         a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
         a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
-        mask = np.where(elemental_thicknesses_target_image==0.12345678)
+        mask = np.where(elemental_thicknesses_target_image[:,:,0]==0.12345678)
+        mask = np.stack((mask,mask,mask))
         target_image[0,:,:] = target_image[0,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6520_Mn - elemental_thicknesses_target_image[:,:,1]*a_6520_Cu - elemental_thicknesses_target_image[:,:,2]*a_6520_Bi)
         target_image[1,:,:] = target_image[1,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6600_Mn - elemental_thicknesses_target_image[:,:,1]*a_6600_Cu - elemental_thicknesses_target_image[:,:,2]*a_6600_Bi)
         target_image[2,:,:] = target_image[2,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_8970_Mn - elemental_thicknesses_target_image[:,:,1]*a_8970_Cu - elemental_thicknesses_target_image[:,:,2]*a_8970_Bi)
