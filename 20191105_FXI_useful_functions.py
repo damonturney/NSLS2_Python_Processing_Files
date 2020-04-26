@@ -1142,10 +1142,6 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
     #If the elements are supposed to be removed from the image, remove them now
     if remove_elements == 'yes':
         elemental_thicknesses_target_image = get_processed_image(target_scan_number,'elemental_RGB')
-        elemental_thicknesses_other_image1 = get_processed_image(other_scan_numbers_in_baseline[0],'elemental_RGB')
-        elemental_thicknesses_other_image2 = get_processed_image(other_scan_numbers_in_baseline[1],'elemental_RGB')
-        elemental_thicknesses_other_image3 = get_processed_image(other_scan_numbers_in_baseline[2],'elemental_RGB')
-        elemental_thicknesses_other_image4 = get_processed_image(other_scan_numbers_in_baseline[3],'elemental_RGB')
         # X-ray absorption coefficients in units of 1/mm 
         a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
         a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
