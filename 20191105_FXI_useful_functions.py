@@ -305,8 +305,6 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
     h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
     ims     = np.array(h5object['xray_images'])
-    good_indices = calculate_debuffer_multiple_images(ims,lossy='yes')
-    ims[:,0:good_indices[2],:] = 0.12345678;  ims[:,good_indices[3]:,:] = 0.12345678; ims[:,:,0:good_indices[0]] = 0.12345678; ims[:,:,good_indices[1]:] = 0.12345678;
     ims[ims<=0.0]=0.0000001 #so that np.log doesn't create an error
     
     # X-ray absorption coefficients in units of 1/mm 
@@ -344,27 +342,28 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     for m in range(0,ims[0,:,:].shape[0]):
         if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
         sys.stdout.flush()
-        for n in range(0,ims[0,:,:].shape[1]):        
-            ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
-            
-            b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-            b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-            b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-            
-            temp = np.linalg.solve(A, b)
-            #the above calculation produces optical thickness in mm, but below I convert it to microns!!!!
-            optical_thickness_Mn[m,n] = np.float32(temp[0])*1000.0
-            optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0
-            optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0
-            total_thickness = total_thickness*1000.0              
-            optical_thickness_C = optical_thickness_C*1000.0      
-            optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
-            #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-            optical_thickness_Mn[:,0:good_indices[2],:] = 0.12345678;  optical_thickness_Mn[:,good_indices[3]:,:] = 0.12345678; optical_thickness_Mn[:,:,0:good_indices[0]] = 0.12345678; optical_thickness_Mn[:,:,good_indices[1]:] = 0.12345678;
-            optical_thickness_Cu[:,0:good_indices[2],:] = 0.12345678;  optical_thickness_Cu[:,good_indices[3]:,:] = 0.12345678; optical_thickness_Cu[:,:,0:good_indices[0]] = 0.12345678; optical_thickness_Cu[:,:,good_indices[1]:] = 0.12345678;
-            optical_thickness_Bi[:,0:good_indices[2],:] = 0.12345678;  optical_thickness_Bi[:,good_indices[3]:,:] = 0.12345678; optical_thickness_Bi[:,:,0:good_indices[0]] = 0.12345678; optical_thickness_Bi[:,:,good_indices[1]:] = 0.12345678;
-            optical_thickness_C [:,0:good_indices[2],:] = 0.12345678;  optical_thickness_C [:,good_indices[3]:,:] = 0.12345678; optical_thickness_C [:,:,0:good_indices[0]] = 0.12345678; optical_thickness_C [:,:,good_indices[1]:] = 0.12345678;
-            optical_thickness_El[:,0:good_indices[2],:] = 0.12345678;  optical_thickness_El[:,good_indices[3]:,:] = 0.12345678; optical_thickness_El[:,:,0:good_indices[0]] = 0.12345678; optical_thickness_El[:,:,good_indices[1]:] = 0.12345678;
+        for n in range(0,ims[0,:,:].shape[1]): 
+            if np.where(ims[:,m,n]==0.12345678)[0].shape[0]==0:
+                ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
+                
+                b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
+                b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
+                b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
+                
+                temp = np.linalg.solve(A, b)
+                #the above calculation produces optical thickness in mm, but below I convert it to microns!!!!
+                optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0
+                optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0
+                total_thickness = total_thickness*1000.0              
+                optical_thickness_C = optical_thickness_C*1000.0      
+                optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
+            else:
+                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
+                optical_thickness_Mn[m,n] = 0.12345678;  
+                optical_thickness_Cu[m,n] = 0.12345678;  
+                optical_thickness_Bi[m,n] = 0.12345678;  
+                optical_thickness_C[m,n]  = 0.12345678;  
+                optical_thickness_El[m,n] = 0.12345678;  
             
     sys.stdout.flush()
     sys.stdout.write('\n')
