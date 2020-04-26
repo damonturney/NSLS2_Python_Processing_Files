@@ -1137,7 +1137,6 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
     
     target_image = get_processed_image(target_scan_number, 'xray_images')
-    mask = np.where(target_image==0.12345678)
     
     #If the elements are supposed to be removed from the image, remove them now
     if remove_elements == 'yes':
@@ -1173,6 +1172,7 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
         fractional_difference = (target_image - baseline_image)/baseline_image
         fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
         fractional_difference[fractional_difference<-0.5] = 0.0
+        mask = np.where(target_image==0.12345678)
         fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
     
     # Deflicker the 6520 eV image
