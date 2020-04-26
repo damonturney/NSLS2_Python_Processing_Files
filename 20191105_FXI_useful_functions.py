@@ -70,7 +70,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
 # align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
 # debuffer_multiple_image_files(scan_numbers):
-# deflicker_time_series():
+# deflicker_xray_images(scan_numbers,gaussian_filter_sizes,remove_elements='no'):
 # calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
 # make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
 # make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
@@ -89,7 +89,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # calculate_debuffer_multiple_images(ims): return(debuffer_all_images)
 # calculate_image_debuffer_multiple_files(scan_numbers):  return(debuffer_multi_file)
 # get_images_statistics(scan_numbers, image_type_2_show ): return(images_mean, images_std) 
-# deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , remove_elements='no')
+# def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , remove_elements='no'):
 ###########################################################
 
 
@@ -98,9 +98,10 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # 0) Create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')
 # 1) Run internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
 # 2) Run align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
-# 3) deflickering_time_series(range(34565,34725,2),[100,100,50,50])  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
+# 3) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],remove_elements='no')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50
 # 4) calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): 
-# 5) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
+# 5) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],remove_elements='yes')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray image
+# 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
     
 def make_average_image(scan_numbers, which_image, output_filename ):
@@ -278,7 +279,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
 
   
   
-def deflicker_time_series_first_pass(scan_numbers,gaussian_filter_sizes,remove_elements='no'):
+def deflicker_xray_images(scan_numbers,gaussian_filter_sizes,remove_elements='no'):
     i=0
     print('de-flickering ' + str(scan_numbers[i])) 
     deflicker_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes,remove_elements)
@@ -1135,6 +1136,9 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
     filename_string ="%.4f" % target_scan_number
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
     
+    target_image = get_processed_image(target_scan_number, 'xray_images')
+    mask = np.where(target_image==0.12345678)
+    
     #If the elements are supposed to be removed from the image, remove them now
     if remove_elements == 'yes':
         elemental_thicknesses_target_image = get_processed_image(target_scan_number,'elemental_RGB')
@@ -1148,42 +1152,31 @@ def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline 
         a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
         a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
         a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
-        
-    target_image = get_processed_image(target_scan_number, 'xray_images')
-    mask = np.where(target_image==0.12345678)
-    other_image1 = get_processed_image(other_scan_numbers_in_baseline[0], 'xray_images')
-    other_image2 = get_processed_image(other_scan_numbers_in_baseline[1], 'xray_images')
-    other_image3 = get_processed_image(other_scan_numbers_in_baseline[2], 'xray_images')
-    other_image4 = get_processed_image(other_scan_numbers_in_baseline[3], 'xray_images')
-    if remove_elements == 'yes':
         mask = np.where(elemental_thicknesses_target_image==0.12345678)
         target_image[0,:,:] = target_image[0,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6520_Mn - elemental_thicknesses_target_image[:,:,1]*a_6520_Cu - elemental_thicknesses_target_image[:,:,2]*a_6520_Bi)
         target_image[1,:,:] = target_image[1,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6600_Mn - elemental_thicknesses_target_image[:,:,1]*a_6600_Cu - elemental_thicknesses_target_image[:,:,2]*a_6600_Bi)
         target_image[2,:,:] = target_image[2,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_8970_Mn - elemental_thicknesses_target_image[:,:,1]*a_8970_Cu - elemental_thicknesses_target_image[:,:,2]*a_8970_Bi)
         target_image[3,:,:] = target_image[3,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_9050_Mn - elemental_thicknesses_target_image[:,:,1]*a_9050_Cu - elemental_thicknesses_target_image[:,:,2]*a_9050_Bi)
-        other_image1[0,:,:] = other_image1[0,:,:]/np.exp(-elemental_thicknesses_other_image1[:,:,0]*a_6520_Mn - elemental_thicknesses_other_image1[:,:,1]*a_6520_Cu - elemental_thicknesses_other_image1[:,:,2]*a_6520_Bi)
-        other_image1[1,:,:] = other_image1[1,:,:]/np.exp(-elemental_thicknesses_other_image1[:,:,0]*a_6600_Mn - elemental_thicknesses_other_image1[:,:,1]*a_6600_Cu - elemental_thicknesses_other_image1[:,:,2]*a_6600_Bi)
-        other_image1[2,:,:] = other_image1[2,:,:]/np.exp(-elemental_thicknesses_other_image1[:,:,0]*a_8970_Mn - elemental_thicknesses_other_image1[:,:,1]*a_8970_Cu - elemental_thicknesses_other_image1[:,:,2]*a_8970_Bi)
-        other_image1[3,:,:] = other_image1[3,:,:]/np.exp(-elemental_thicknesses_other_image1[:,:,0]*a_9050_Mn - elemental_thicknesses_other_image1[:,:,1]*a_9050_Cu - elemental_thicknesses_other_image1[:,:,2]*a_9050_Bi)
-        other_image2[0,:,:] = other_image2[0,:,:]/np.exp(-elemental_thicknesses_other_image2[:,:,0]*a_6520_Mn - elemental_thicknesses_other_image2[:,:,1]*a_6520_Cu - elemental_thicknesses_other_image2[:,:,2]*a_6520_Bi)
-        other_image2[1,:,:] = other_image2[1,:,:]/np.exp(-elemental_thicknesses_other_image2[:,:,0]*a_6600_Mn - elemental_thicknesses_other_image2[:,:,1]*a_6600_Cu - elemental_thicknesses_other_image2[:,:,2]*a_6600_Bi)
-        other_image2[2,:,:] = other_image2[2,:,:]/np.exp(-elemental_thicknesses_other_image2[:,:,0]*a_8970_Mn - elemental_thicknesses_other_image2[:,:,1]*a_8970_Cu - elemental_thicknesses_other_image2[:,:,2]*a_8970_Bi)
-        other_image2[3,:,:] = other_image2[3,:,:]/np.exp(-elemental_thicknesses_other_image2[:,:,0]*a_9050_Mn - elemental_thicknesses_other_image2[:,:,1]*a_9050_Cu - elemental_thicknesses_other_image2[:,:,2]*a_9050_Bi)
-        other_image3[0,:,:] = other_image3[0,:,:]/np.exp(-elemental_thicknesses_other_image3[:,:,0]*a_6520_Mn - elemental_thicknesses_other_image3[:,:,1]*a_6520_Cu - elemental_thicknesses_other_image3[:,:,2]*a_6520_Bi)
-        other_image3[1,:,:] = other_image3[1,:,:]/np.exp(-elemental_thicknesses_other_image3[:,:,0]*a_6600_Mn - elemental_thicknesses_other_image3[:,:,1]*a_6600_Cu - elemental_thicknesses_other_image3[:,:,2]*a_6600_Bi)
-        other_image3[2,:,:] = other_image3[2,:,:]/np.exp(-elemental_thicknesses_other_image3[:,:,0]*a_8970_Mn - elemental_thicknesses_other_image3[:,:,1]*a_8970_Cu - elemental_thicknesses_other_image3[:,:,2]*a_8970_Bi)
-        other_image3[3,:,:] = other_image3[3,:,:]/np.exp(-elemental_thicknesses_other_image3[:,:,0]*a_9050_Mn - elemental_thicknesses_other_image3[:,:,1]*a_9050_Cu - elemental_thicknesses_other_image3[:,:,2]*a_9050_Bi)
-        other_image4[0,:,:] = other_image4[0,:,:]/np.exp(-elemental_thicknesses_other_image4[:,:,0]*a_6520_Mn - elemental_thicknesses_other_image4[:,:,1]*a_6520_Cu - elemental_thicknesses_other_image4[:,:,2]*a_6520_Bi)
-        other_image4[1,:,:] = other_image4[1,:,:]/np.exp(-elemental_thicknesses_other_image4[:,:,0]*a_6600_Mn - elemental_thicknesses_other_image4[:,:,1]*a_6600_Cu - elemental_thicknesses_other_image4[:,:,2]*a_6600_Bi)
-        other_image4[2,:,:] = other_image4[2,:,:]/np.exp(-elemental_thicknesses_other_image4[:,:,0]*a_8970_Mn - elemental_thicknesses_other_image4[:,:,1]*a_8970_Cu - elemental_thicknesses_other_image4[:,:,2]*a_8970_Bi)
-        other_image4[3,:,:] = other_image4[3,:,:]/np.exp(-elemental_thicknesses_other_image4[:,:,0]*a_9050_Mn - elemental_thicknesses_other_image4[:,:,1]*a_9050_Cu - elemental_thicknesses_other_image4[:,:,2]*a_9050_Bi)
-
-    # Calculate the fractional difference between the target image and the baseline images
-    baseline_image = other_image1/5 + other_image2/5 + target_image/5 + other_image3/5 + other_image4/5 
-    fractional_difference = (target_image - baseline_image)/baseline_image
-    fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
-    fractional_difference[fractional_difference<-0.5] = 0.0
-    fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
+        baseline_image = target_image*0.0
+        baseline_image[0,:,:] = np.median(target_image[0,:,:])
+        baseline_image[1,:,:] = np.median(target_image[1,:,:])
+        baseline_image[2,:,:] = np.median(target_image[2,:,:])
+        baseline_image[3,:,:] = np.median(target_image[3,:,:])
+        fractional_difference = (target_image - baseline_image)/baseline_image
+        fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
+        fractional_difference[fractional_difference<-0.5] = 0.0
+        fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
+    else:
+        other_image1 = get_processed_image(other_scan_numbers_in_baseline[0], 'xray_images')
+        other_image2 = get_processed_image(other_scan_numbers_in_baseline[1], 'xray_images')
+        other_image3 = get_processed_image(other_scan_numbers_in_baseline[2], 'xray_images')
+        other_image4 = get_processed_image(other_scan_numbers_in_baseline[3], 'xray_images')        
+        # Calculate the fractional difference between the target image and the baseline images
+        baseline_image = other_image1/5 + other_image2/5 + target_image/5 + other_image3/5 + other_image4/5 
+        fractional_difference = (target_image - baseline_image)/baseline_image
+        fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
+        fractional_difference[fractional_difference<-0.5] = 0.0
+        fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
     
     # Deflicker the 6520 eV image
     blurred_fractional_difference1 = scipy.ndimage.gaussian_filter(fractional_difference[0,:,:],sigma=gaussian_filter_sizes[0],mode='reflect')
