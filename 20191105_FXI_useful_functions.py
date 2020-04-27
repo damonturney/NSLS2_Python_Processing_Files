@@ -105,7 +105,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ############################################################
 
 
-                                                                   #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+                                                                   #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi' or 'BiMn' or 'CuBi' etc...
 def make_average_image(scan_numbers, which_image, output_filename , remove_elements = 'none'):           
     average_scalar_series = np.ones(len(scan_numbers))
     std_scalar_series = np.ones(len(scan_numbers))
@@ -759,7 +759,7 @@ def get_raw_image(filename,which_image):
 
 #mask = np.where(np.repeat(np.expand_dims(elemental_thicknesses_target_image[:,:,0],axis=0),4,axis=0)==0.12345678) #Convert the mask for where 0.12345678 is from the [1080,1280,3] shape of elemental_rgb array to the [4,1080,1280] shape of the xray_images array
 
-                                              #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+                                              #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi' or 'BiMn' or 'CuBi' etc...
 def get_processed_image(filename, which_image, remove_elements='none'):
     if type(filename) != str:
         filename="%.4f" % filename
@@ -894,17 +894,17 @@ def remove_elements_from_raw_TXM_image(input_image, beam_energy, thicknesses_Mn,
     mask = np.where(thicknesses_Mn==0.12345678)
     output_image = 1.0*input_image
     
-    if remove_elements == 'Mn' or remove_elements == 'all':
+    if  'Mn' in remove_elements or remove_elements == 'all':
         if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Mn)
         if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Mn)
         if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Mn)
         if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Mn)
-    if remove_elements == 'Cu' or remove_elements == 'all':
+    if 'Cu' in remove_elements or remove_elements == 'all':
         if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Cu)
         if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Cu)
         if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Cu)
         if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Cu)
-    if remove_elements == 'Bi' or remove_elements == 'all':
+    if 'Bi' in remove_elements or remove_elements == 'all':
         if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Bi*a_6520_Bi)
         if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Bi*a_6600_Bi)
         if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Bi*a_8970_Bi)
@@ -1192,7 +1192,7 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 
 
 
-       # there must be four scan numbers in the input variable ----> other_scan_numbers_in_baseline                          remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+       # there must be four scan numbers in the input variable ----> other_scan_numbers_in_baseline                          remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi' or 'BiMn' or 'CuBi' etc...
 def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , beam_energy='all', remove_elements='none', baseline_image='none'):
     filename_string ="%.4f" % target_scan_number                                                        # beam_energy can be 'all' or '6520' or '6600' or '8970' or '9050'
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
