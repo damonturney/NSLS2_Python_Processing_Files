@@ -105,10 +105,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ############################################################
 
 
-                                                                   
-def make_average_image(scan_numbers, which_image, output_filename , remove_elements = 'none'):
-    test_im = get_raw_image(scan_numbers[0],'img_dark')            #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
-    average_image = test_im*0.0
+                                                                   #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+def make_average_image(scan_numbers, which_image, output_filename , remove_elements = 'none'):           
     average_scalar_series = np.ones(len(scan_numbers))
     std_scalar_series = np.ones(len(scan_numbers))
     for i in range(len(scan_numbers)):
@@ -116,17 +114,25 @@ def make_average_image(scan_numbers, which_image, output_filename , remove_eleme
         if which_image == 'img_bkg':
             im=get_raw_image(scan_numbers[i],'img_bkg')
             im=np.mean(im,axis=0)
+            if i==0: 
+                test_im = get_raw_image(scan_numbers[0],'img_bkg')[0,:,:]
+                average_image = test_im*0.0
         if which_image == 'img_dark':
-            im=get_raw_image(scan_numbers[i],'img_dark')
-            im=im[0,:,:]
+            im=get_raw_image(scan_numbers[i],'img_dark')[0,:,:]
+            if i==0: 
+                test_im = get_raw_image(scan_numbers[0],'img_dark')[0,:,:]
+                average_image = test_im*0.0
         if which_image != 'img_bkg' and which_image != 'img_dark':
             im=get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0]
-        
+            if i==0: 
+                test_im = get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0] 
+                average_image = test_im*0.0
+
         print('calculating img: ' + str(scan_numbers[i]))
 
-        average_image = average_image + im
-        average_scalar_series[i] = np.mean(im[:])
-        std_scalar_series[i] = np.std(im[:])
+        if i>0: average_image = average_image + im
+        average_scalar_series[i] = np.mean(im[im!=0.12345678])
+        std_scalar_series[i] = np.std(im[im!=0.12345678])
     
     average_image = average_image/np.float32(len(scan_numbers))
     h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
