@@ -115,19 +115,16 @@ def make_average_image(scan_numbers, which_image, output_filename , remove_eleme
             im=get_raw_image(scan_numbers[i],'img_bkg')
             im=np.mean(im,axis=0)
             if i==0: 
-                test_im = get_raw_image(scan_numbers[0],'img_bkg')[0,:,:]
-                average_image = test_im*0.0
+                average_image = im*0.0
         if which_image == 'img_dark':
             im=get_raw_image(scan_numbers[i],'img_dark')[0,:,:]
             if i==0: 
-                test_im = get_raw_image(scan_numbers[0],'img_dark')[0,:,:]
-                average_image = test_im*0.0
+                average_image = im*0.0
         if which_image != 'img_bkg' and which_image != 'img_dark':
             im=get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0]
             im[im==0.12345678] = np.median(im[im!=0.12345678])
             if i==0: 
-                test_im = get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0] 
-                average_image = test_im*0.0
+                average_image = im*0.0
 
         print('calculating img: ' + str(scan_numbers[i]))
 
@@ -137,7 +134,7 @@ def make_average_image(scan_numbers, which_image, output_filename , remove_eleme
     
     average_image = average_image/np.float32(len(scan_numbers))
     h5object_new = h5py.File(data_directory+data_subdirectory+output_filename, 'w')
-    h5object_new.create_dataset('average_image', shape=(test_im.shape), dtype=np.float32, data=average_image)
+    h5object_new.create_dataset('average_image', shape=(average_image.shape), dtype=np.float32, data=average_image)
     return(average_scalar_series, std_scalar_series)
 
 
