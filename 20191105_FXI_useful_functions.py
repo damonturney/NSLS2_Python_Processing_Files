@@ -880,7 +880,7 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     
     
         
-def remove_elements_from_raw_TXM_image(input_image, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, remove_elements):        
+def remove_elements_from_raw_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, remove_elements):        
     # X-ray absorption coefficients in units of 1/microns 
     a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
     a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
@@ -889,26 +889,25 @@ def remove_elements_from_raw_TXM_image(input_image, beam_energy, thicknesses_Mn,
     a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
         
     mask = np.where(thicknesses_Mn==0.12345678)
-    output_image = 1.0*input_image
     
     if  'Mn' in remove_elements or remove_elements == 'all':
-        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Mn)
-        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Mn)
-        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Mn)
-        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Mn)
+        if beam_energy=='6520': im = im/np.exp(-thicknesses_Mn*a_6520_Mn)
+        if beam_energy=='6600': im = im/np.exp(-thicknesses_Mn*a_6600_Mn)
+        if beam_energy=='8970': im = im/np.exp(-thicknesses_Mn*a_8970_Mn)
+        if beam_energy=='9050': im = im/np.exp(-thicknesses_Mn*a_9050_Mn)
     if 'Cu' in remove_elements or remove_elements == 'all':
-        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Cu)
-        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Cu)
-        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Cu)
-        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Cu)
+        if beam_energy=='6520': im = im/np.exp(-thicknesses_Mn*a_6520_Cu)
+        if beam_energy=='6600': im = im/np.exp(-thicknesses_Mn*a_6600_Cu)
+        if beam_energy=='8970': im = im/np.exp(-thicknesses_Mn*a_8970_Cu)
+        if beam_energy=='9050': im = im/np.exp(-thicknesses_Mn*a_9050_Cu)
     if 'Bi' in remove_elements or remove_elements == 'all':
-        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Bi*a_6520_Bi)
-        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Bi*a_6600_Bi)
-        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Bi*a_8970_Bi)
-        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Bi*a_9050_Bi)        
+        if beam_energy=='6520': im = im/np.exp(-thicknesses_Bi*a_6520_Bi)
+        if beam_energy=='6600': im = im/np.exp(-thicknesses_Bi*a_6600_Bi)
+        if beam_energy=='8970': im = im/np.exp(-thicknesses_Bi*a_8970_Bi)
+        if beam_energy=='9050': im = im/np.exp(-thicknesses_Bi*a_9050_Bi)        
 
-    output_image[mask] = 0.12345678
-    return(output_image)
+    im[mask] = 0.12345678
+    return(im)
    
 
     
