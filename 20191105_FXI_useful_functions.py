@@ -124,6 +124,7 @@ def make_average_image(scan_numbers, which_image, output_filename , remove_eleme
                 average_image = test_im*0.0
         if which_image != 'img_bkg' and which_image != 'img_dark':
             im=get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0]
+            im[im==0.12345678] = np.median(im[im!=0.12345678])
             if i==0: 
                 test_im = get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0] 
                 average_image = test_im*0.0
