@@ -299,7 +299,7 @@ def deflicker_xray_images(scan_numbers,gaussian_filter_sizes,remove_elements='no
     
     
     
-# Run this function on the files output from save_aligned_h5_file     #All length units in mm
+# Run this function on the files output from save_aligned_h5_file     #All input length units are in mm.  All output units are in microns
 def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): #Run this on the files output from save_aligned_h5_file
     if type(filename) != str:
         filename="%.4f" % filename
@@ -357,7 +357,7 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
                 optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0
                 optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0
                 optical_thickness_C[m,n]  = carbon_thickness*1000.0      
-                optical_thickness_El[m,n] = total_thickness - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in mm         
+                optical_thickness_El[m,n] = total_thickness*1000.0 - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in microns         
             else:
                 #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
                 optical_thickness_Mn[m,n] = 0.12345678;  
