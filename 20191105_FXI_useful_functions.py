@@ -103,9 +103,11 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # 5) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],remove_elements='yes')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray image
 # 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
-    
-def make_average_image(scan_numbers, which_image, output_filename ):
-    test_im = get_raw_image(scan_numbers[0],'img_dark')
+
+
+                                                                   
+def make_average_image(scan_numbers, which_image, output_filename , remove_elements = 'none'):
+    test_im = get_raw_image(scan_numbers[0],'img_dark')            #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
     average_image = test_im*0.0
     average_scalar_series = np.ones(len(scan_numbers))
     std_scalar_series = np.ones(len(scan_numbers))
@@ -118,7 +120,7 @@ def make_average_image(scan_numbers, which_image, output_filename ):
             im=get_raw_image(scan_numbers[i],'img_dark')
             im=im[0,:,:]
         if which_image != 'img_bkg' and which_image != 'img_dark':
-            im=get_processed_image(scan_numbers[i], which_image)[:,:,0]
+            im=get_processed_image(scan_numbers[i], which_image, remove_elements)[:,:,0]
         
         print('calculating img: ' + str(scan_numbers[i]))
 
@@ -649,18 +651,19 @@ def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST
     beam_energies = np.array(h5object['beam_energies'])
     xanes_ims     = np.array(h5object['xray_images'])
     xanes_ims[xanes_ims<=0.0]=np.median(xanes_ims[xanes_ims>0]) #so that np.log doesn't create an error
+    # Grab the calculated thicknesses in microns
     optical_thickness_Mn= np.array(h5object['optical_thickness_Mn'])
     optical_thickness_Cu= np.array(h5object['optical_thickness_Cu'])
     optical_thickness_Bi= np.array(h5object['optical_thickness_Bi'])
     optical_thickness_C = np.array(h5object['optical_thickness_C'])
     optical_thickness_El= np.array(h5object['optical_thickness_El'])
     
-    # X-ray absorption coefficients in units of 1/mm 
-    a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;
-    a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
-    a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
-    a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
-    a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
+    # X-ray absorption coefficients in units of 1/mm converted to 1/micron by multiplying by 1000
+    a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
+    a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
+    a_6520_Bi = 389.43/1000;  a_6600_Bi = 377.563/1000; a_8970_Bi = 172.32/1000; a_9050_Bi = 168.434/1000;
+    a_6520_El = 3.254/1000;   a_6600_El = 3.136/1000;   a_8970_El = 1.229/1000;  a_9050_El = 1.1966/1000;  #1 part NaOH and 5 parts H2O (by mole ratios)
+    a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
     
     #Plot measured data as an image
     plt.scatter(beam_energies, xanes_ims[:,row,column],s=50*np.ones(4),marker='x')
@@ -680,12 +683,13 @@ def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST
 
     #plt.figure()
     #plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [optical_thickness_Mn[row,column], optical_thickness_Cu[row,column], optical_thickness_Bi[row,column], optical_thickness_C[row,column], optical_thickness_El[row,column]])
-    print(optical_thickness_Mn[row,column] + optical_thickness_Cu[row,column] + optical_thickness_Bi[row,column] + optical_thickness_C[row,column] + optical_thickness_El[row,column])
+    print('Elemental thicknesses in microns.')
     print('Mn: ' + str(optical_thickness_Mn[row,column]))
     print('Cu: ' + str(optical_thickness_Cu[row,column]))
     print('Bi: ' + str(optical_thickness_Bi[row,column]))
     print('C: ' +  str(optical_thickness_C[row,column]))
     print('El: ' + str(optical_thickness_El[row,column]))
+    print('total: '+ str(optical_thickness_Mn[row,column] + optical_thickness_Cu[row,column] + optical_thickness_Bi[row,column] + optical_thickness_C[row,column] + optical_thickness_El[row,column]))
 
     
     plt.figure()
@@ -746,16 +750,22 @@ def get_raw_image(filename,which_image):
     return(images)
 
 
+#mask = np.where(np.repeat(np.expand_dims(elemental_thicknesses_target_image[:,:,0],axis=0),4,axis=0)==0.12345678) #Convert the mask for where 0.12345678 is from the [1080,1280,3] shape of elemental_rgb array to the [4,1080,1280] shape of the xray_images array
 
-
-def get_processed_image(filename,which_image):
+                                              #remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+def get_processed_image(filename, which_image, remove_elements='none'):
     if type(filename) != str:
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')
+    h5object= h5py.File(data_directory+data_subdirectory+filename, 'r')   
     
     if which_image == 'all':
         xray_images = np.array(h5object['xray_images'])
+        if remove_elements != 'none': 
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         optical_thickness_Mn = np.array(h5object['optical_thickness_Mn'])
         optical_thickness_Cu = np.array(h5object['optical_thickness_Cu'])
         optical_thickness_Bi = np.array(h5object['optical_thickness_Bi'])
@@ -766,35 +776,48 @@ def get_processed_image(filename,which_image):
     
     if which_image == 'xray_images':
         xray_images = np.array(h5object['xray_images'])
+        if remove_elements != 'none': 
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images = remove_elements_from_raw_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         h5object.close()
         return(xray_images)
 
     if which_image == '6520' or which_image == 'Mn_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        h5object.close()
+        if remove_elements != 'none':
+            xray_images[0,:,:] = remove_elements_from_raw_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[0,:,:]
+        h5object.close()
         return(returned_image)
 
     if which_image == '6600' or which_image == 'Mn_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        h5object.close()
+        if remove_elements != 'none':
+            xray_images[1,:,:] = remove_elements_from_raw_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[1,:,:]
+        h5object.close()
         return(returned_image)
     
     if which_image == '8970' or which_image == 'Cu_raw_im1':
         xray_images = np.array(h5object['xray_images'])
-        h5object.close()
+        if remove_elements != 'none':
+            xray_images[2,:,:] = remove_elements_from_raw_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[2,:,:]
+        h5object.close()
         return(returned_image)
     
     if which_image == '9050' or which_image == 'Cu_raw_im2':
         xray_images = np.array(h5object['xray_images'])
-        h5object.close()
+        if remove_elements != 'none':
+            xray_images[3,:,:] = remove_elements_from_raw_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[3,:,:]
+        h5object.close()
         return(returned_image)
     
     if which_image == 'all_thickness':
@@ -850,11 +873,42 @@ def get_processed_image(filename,which_image):
         
         
     
-        
-        
     
+    
+        
+def remove_elements_from_raw_TXM_image(input_image, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, remove_elements):        
+    # X-ray absorption coefficients in units of 1/microns 
+    a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
+    a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
+    a_6520_Bi = 389.43/1000;  a_6600_Bi = 377.563/1000; a_8970_Bi = 172.32/1000; a_9050_Bi = 168.434/1000;
+    a_6520_El = 3.254/1000;   a_6600_El = 3.136/1000;   a_8970_El = 1.229/1000;  a_9050_El = 1.1966/1000;  #1 part NaOH and 5 parts H2O (by mole ratios)
+    a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
+        
+    mask = np.where(thicknesses_Mn==0.12345678)
+    output_image = 1.0*input_image
+    
+    if remove_elements == 'Mn' or remove_elements == 'all':
+        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Mn)
+        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Mn)
+        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Mn)
+        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Mn)
+    if remove_elements == 'Cu' or remove_elements == 'all':
+        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Mn*a_6520_Cu)
+        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Mn*a_6600_Cu)
+        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Mn*a_8970_Cu)
+        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Mn*a_9050_Cu)
+    if remove_elements == 'Bi' or remove_elements == 'all':
+        if beam_energy=='6520': output_image = input_image/np.exp(-thicknesses_Bi*a_6520_Bi)
+        if beam_energy=='6600': output_image = input_image/np.exp(-thicknesses_Bi*a_6600_Bi)
+        if beam_energy=='8970': output_image = input_image/np.exp(-thicknesses_Bi*a_8970_Bi)
+        if beam_energy=='9050': output_image = input_image/np.exp(-thicknesses_Bi*a_9050_Bi)        
+
+    output_image[mask] = 0.12345678
+    return(output_image)
+   
 
     
+
 def dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El):
     test_sum_squares = np.zeros(8)
     
@@ -1131,65 +1185,60 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 
 
 
-       # there must be four scan numbers in the input variable ----> other_scan_numbers_in_baseline
-def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , remove_elements='no'):
-    filename_string ="%.4f" % target_scan_number
+       # there must be four scan numbers in the input variable ----> other_scan_numbers_in_baseline                          remove_elements can be 'none' or 'all' or 'Mn' or 'Cu' or 'Bi
+def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , beam_energy='all', remove_elements='none', baseline_image='none'):
+    filename_string ="%.4f" % target_scan_number                                                        # beam_energy can be 'all' or '6520' or '6600' or '8970' or '9050'
     filename_string ='processed_images_'+filename_string[0:5]+'_repeat_'+filename_string[6:8]+'_pos_'+filename_string[8:10]+'.h5'
     
-    target_image = get_processed_image(target_scan_number, 'xray_images')
+    target_image = get_processed_image(target_scan_number, 'xray_images', remove_elements)
+    deflickered_image = 1.0*target_image
+    other_image1 = get_processed_image(other_scan_numbers_in_baseline[0], 'xray_images', remove_elements)
+    other_image2 = get_processed_image(other_scan_numbers_in_baseline[1], 'xray_images', remove_elements)
+    other_image3 = get_processed_image(other_scan_numbers_in_baseline[2], 'xray_images', remove_elements)
+    other_image4 = get_processed_image(other_scan_numbers_in_baseline[3], 'xray_images', remove_elements)    
     
-    #If the elements are supposed to be removed from the image, remove them now
-    if remove_elements == 'yes':
-        elemental_thicknesses_target_image = get_processed_image(target_scan_number,'elemental_RGB')
-        # elemental_thicknesses_target_image[]
-        # X-ray absorption coefficients in units of 1/mm 
-        a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
-        a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
-        a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
-        a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
-        a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
-        mask = np.where(np.repeat(np.expand_dims(elemental_thicknesses_target_image[:,:,0],axis=0),4,axis=0)==0.12345678) #Convert the mask for where 0.12345678 is from the [1080,1280,3] shape of elemental_rgb array to the [4,1080,1280] shape of the xray_images array
-        target_image[0,:,:] = target_image[0,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6520_Mn - elemental_thicknesses_target_image[:,:,1]*a_6520_Cu - elemental_thicknesses_target_image[:,:,2]*a_6520_Bi)
-        target_image[1,:,:] = target_image[1,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_6600_Mn - elemental_thicknesses_target_image[:,:,1]*a_6600_Cu - elemental_thicknesses_target_image[:,:,2]*a_6600_Bi)
-        target_image[2,:,:] = target_image[2,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_8970_Mn - elemental_thicknesses_target_image[:,:,1]*a_8970_Cu - elemental_thicknesses_target_image[:,:,2]*a_8970_Bi)
-        target_image[3,:,:] = target_image[3,:,:]/np.exp(-elemental_thicknesses_target_image[:,:,0]*a_9050_Mn - elemental_thicknesses_target_image[:,:,1]*a_9050_Cu - elemental_thicknesses_target_image[:,:,2]*a_9050_Bi)
-        baseline_image = target_image*0.0
-        baseline_image[0,:,:] = np.median(target_image[0,:,:])
-        baseline_image[1,:,:] = np.median(target_image[1,:,:])
-        baseline_image[2,:,:] = np.median(target_image[2,:,:])
-        baseline_image[3,:,:] = np.median(target_image[3,:,:])
-        fractional_difference = (target_image - baseline_image)/baseline_image
-        fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
-        fractional_difference[fractional_difference<-0.5] = 0.0
-        fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
-    else:
-        other_image1 = get_processed_image(other_scan_numbers_in_baseline[0], 'xray_images')
-        other_image2 = get_processed_image(other_scan_numbers_in_baseline[1], 'xray_images')
-        other_image3 = get_processed_image(other_scan_numbers_in_baseline[2], 'xray_images')
-        other_image4 = get_processed_image(other_scan_numbers_in_baseline[3], 'xray_images')        
-        # Calculate the fractional difference between the target image and the baseline images
-        baseline_image = other_image1/5 + other_image2/5 + target_image/5 + other_image3/5 + other_image4/5 
-        fractional_difference = (target_image - baseline_image)/baseline_image
-        fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
-        fractional_difference[fractional_difference<-0.5] = 0.0
-        mask = np.where(target_image==0.12345678)
-        fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
+    # Calculate the fractional difference between the target image and the baseline images
+    baseline_image = other_image1/5 + other_image2/5 + target_image/5 + other_image3/5 + other_image4/5 
+    fractional_difference = (target_image - baseline_image)/baseline_image
+    fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
+    fractional_difference[fractional_difference<-0.5] = 0.0
+    mask = np.where(target_image==0.12345678)
+    fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
     
     # Deflicker the 6520 eV image
     blurred_fractional_difference1 = scipy.ndimage.gaussian_filter(fractional_difference[0,:,:],sigma=gaussian_filter_sizes[0],mode='reflect')
     blurred_fractional_difference2 = scipy.ndimage.gaussian_filter(fractional_difference[1,:,:],sigma=gaussian_filter_sizes[1],mode='reflect')
     blurred_fractional_difference3 = scipy.ndimage.gaussian_filter(fractional_difference[2,:,:],sigma=gaussian_filter_sizes[2],mode='reflect')
     blurred_fractional_difference4 = scipy.ndimage.gaussian_filter(fractional_difference[3,:,:],sigma=gaussian_filter_sizes[3],mode='reflect')
-    fixed_image = 0.0*target_image
-    fixed_image[0,:,:] = target_image[0,:,:] / (1.0 + blurred_fractional_difference1)
-    fixed_image[1,:,:] = target_image[1,:,:] / (1.0 + blurred_fractional_difference2)
-    fixed_image[2,:,:] = target_image[2,:,:] / (1.0 + blurred_fractional_difference3)
-    fixed_image[3,:,:] = target_image[3,:,:] / (1.0 + blurred_fractional_difference4)
-    fixed_image[mask] = 0.12345678
+    deflickered_image[0,:,:] = target_image[0,:,:] / (1.0 + blurred_fractional_difference1)
+    deflickered_image[1,:,:] = target_image[1,:,:] / (1.0 + blurred_fractional_difference2)
+    deflickered_image[2,:,:] = target_image[2,:,:] / (1.0 + blurred_fractional_difference3)
+    deflickered_image[3,:,:] = target_image[3,:,:] / (1.0 + blurred_fractional_difference4)
+    deflickered_image[mask] = 0.12345678
     
     h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
-    h5object['xray_images'][...] = fixed_image
+    if beam_energy=='all':
+        h5object['xray_images'][...] = deflickered_image
+    if beam_energy=='6520':
+        deflickered_image[1:,:,:] = target_image[1:,:,:]
+        h5object['xray_images'][...] = deflickered_image
+    if beam_energy=='6600':
+        deflickered_image[1:,:,:] = target_image[0,:,:]
+        deflickered_image[1:,:,:] = target_image[2:,:,:]
+        h5object['xray_images'][...] = deflickered_image
+    if beam_energy=='8970':
+        deflickered_image[1:,:,:] = target_image[0,:,:]
+        deflickered_image[1:,:,:] = target_image[1,:,:]
+        deflickered_image[1:,:,:] = target_image[3:,:,:]
+        h5object['xray_images'][...] = deflickered_image
+    if beam_energy=='9050':
+        deflickered_image[1:,:,:] = target_image[0,:,:]
+        deflickered_image[1:,:,:] = target_image[1,:,:]
+        deflickered_image[1:,:,:] = target_image[2,:,:]        
+        h5object['xray_images'][...] = deflickered_image        
     h5object.close()
     
+
+
 
     
