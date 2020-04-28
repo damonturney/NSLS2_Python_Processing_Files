@@ -1234,7 +1234,7 @@ def deflicker_using_4_neighbors_one_scan_file(target_scan_number , four_neigbhor
     other_image2 = get_processed_image(four_neigbhors[1], 'xray_images', 'none')
     other_image3 = get_processed_image(four_neigbhors[2], 'xray_images', 'none')
     other_image4 = get_processed_image(four_neigbhors[3], 'xray_images', 'none')  
-    baseline_image = other_image1/5 + other_image2/5 + target_image_elements_removed/5 + other_image3/5 + other_image4/5 
+    baseline_image = other_image1/5 + other_image2/5 + target_image/5 + other_image3/5 + other_image4/5 
     
     # Calculate the fractional difference between the target image and the baseline image(s)
     fractional_difference = (target_image - baseline_image)/baseline_image
