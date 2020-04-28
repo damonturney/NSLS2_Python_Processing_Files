@@ -1292,7 +1292,7 @@ def deflicker_using_average_image_elements_removed(target_scan_number , averaged
     temp[mask] = 0.12345678
     
     # Re-insert the elements
-    temp = insert_elements_into_TXM_image(temp, beam_energy, get_processed_image(target_scan_number, 'thicknesses_Mn')[:,:,0], get_processed_image(target_scan_number, 'thicknesses_Cu')[:,:,0], get_processed_image(target_scan_number, 'thicknesses_Bi')[:,:,0], remove_elements)
+    temp = insert_elements_into_TXM_image(temp, beam_energy, get_processed_image(target_scan_number, 'thickness_Mn')[:,:,0], get_processed_image(target_scan_number, 'thickness_Cu')[:,:,0], get_processed_image(target_scan_number, 'thickness_Bi')[:,:,0], remove_elements)
     target_image[x,:,:] = temp
     
     filename="%.4f" % target_scan_number
