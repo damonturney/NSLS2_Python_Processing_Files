@@ -71,7 +71,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
 # debuffer_multiple_image_files(scan_numbers):
 # deflicker_xray_images(scan_numbers,gaussian_filter_sizes,remove_elements='no'):
-# calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2):   
+# calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250):   
 # make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
 # make_movie_with_image_statistics(scan_numbers, image_type_2_show, movie_filename ):
 # calculate_brightness_contrast(filenumbers, image_2_display, low_end_percentile, high_end_percentile): return(np.min(low_end_all_files) , np.max(high_end_all_files))
@@ -80,8 +80,8 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # read_FXI_processed_h5_metadata(filename): return(scan_start_time_string, scan_time, beam_energy, scan_id, notes, translations)
 # get_raw_image(filename,which_image):
 # get_processed_image(filename,which_image):  return(image)
-# dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(test_sum_squares)    
-# calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El): return(baseline_sum_square_error)
+# dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2): return(test_sum_squares)    
+# calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2): return(baseline_sum_square_error)
 # show_cross_correlation_map(im1,im2,debuffer=0):
 # find_image_translation( im1, im2, im2_cropping, cc_search_distance): return(np.array([translation_y, translation_x]), error, cc_image)
 # erc_R(im1, im2_orig, im2_cropping, cc_search_distance): return(R)
@@ -97,9 +97,9 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')  to create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  
 # 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
-# 2) align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_optical_thickness(i);   
+# 2) align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_elemental_moles_per_cm2(i);   
 # 3) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
-# 4) calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): 
+# 4) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
 # 5) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'BiMn')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
 # 5) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],background_image='ave_8970_34565_34725_Bi_and_Mn_removed.h5')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray image
 # 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
@@ -306,8 +306,8 @@ def deflicker_xray_images(scan_numbers , gaussian_filter_sizes):
     
     
     
-# Run this function on the files output from save_aligned_h5_file     #All input length units are in mm.  All output units are in microns
-def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness=0.2): #Run this on the files output from save_aligned_h5_file
+# Run this function on the files output from save_aligned_h5_file     #All input length units are in microns.  All output units are micro-moles/cm2
+def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thickness=250): #Run this on the files output from save_aligned_h5_file
     if type(filename) != str:
         filename="%.4f" % filename
         filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
@@ -315,12 +315,12 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     ims     = np.array(h5object['xray_images'])
     ims[ims<=0.0]=0.00001 #so that np.log doesn't create an error
     
-    # X-ray absorption coefficients in units of 1/mm 
-    a_6520_Mn = 31.573;  a_6600_Mn = 207.698; a_8970_Mn = 94.641; a_9050_Mn = 92.436;  #All length units in mm
-    a_6520_Cu = 85.1;    a_6600_Cu = 82.9;  a_8970_Cu = 34; a_9050_Cu = 265;
-    a_6520_Bi = 389.43;  a_6600_Bi = 377.563; a_8970_Bi = 172.32; a_9050_Bi = 168.434;
-    a_6520_El = 3.254;   a_6600_El = 3.136;   a_8970_El = 1.229;  a_9050_El = 1.1966;  #1 part NaOH and 5 parts H2O (by mole ratios)
-    a_6520_C  = 1.8278;  a_6600_C  = 1.759;   a_8970_C  = 0.6759; a_9050_C  = 0.6577;
+    # X-ray absorption coefficients in units of cm2/micro-moles 
+    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
     
     sum_aMn_aEl = (a_6520_Mn*a_6520_El + a_6600_Mn*a_6600_El + a_8970_Mn*a_8970_El + a_9050_Mn*a_9050_El)
     sum_aCu_aEl = (a_6520_Cu*a_6520_El + a_6600_Cu*a_6600_El + a_8970_Cu*a_8970_El + a_9050_Cu*a_9050_El)
@@ -331,22 +331,31 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
     sum_aBi_aCu = (a_6520_Cu*a_6520_Bi + a_6600_Cu*a_6600_Bi + a_8970_Cu*a_8970_Bi + a_9050_Cu*a_9050_Bi)
     sum_aCu_aCu = (a_6520_Cu*a_6520_Cu + a_6600_Cu*a_6600_Cu + a_8970_Cu*a_8970_Cu + a_9050_Cu*a_9050_Cu)
     sum_aBi_aBi = (a_6520_Bi*a_6520_Bi + a_6600_Bi*a_6600_Bi + a_8970_Bi*a_8970_Bi + a_9050_Bi*a_9050_Bi)
+    sum_aMn_aC  = (a_6520_Mn*a_6520_C  + a_6600_Mn*a_6600_C  + a_8970_Mn*a_8970_C  + a_9050_Mn*a_9050_C )
+    sum_aCu_aC  = (a_6520_Cu*a_6520_C  + a_6600_Cu*a_6600_C  + a_8970_Cu*a_8970_C  + a_9050_Cu*a_9050_C )
+    sum_aBi_aC  = (a_6520_Bi*a_6520_C  + a_6600_Bi*a_6600_C  + a_8970_Bi*a_8970_C  + a_9050_Bi*a_9050_C )
+    
+    molar_density_Mn = 7.3E-6/54.94    # molar weight is 7.3 g/micro-mole.    density is 54.94 g/cm3   end result has units micro-moles/cm3
+    molar_density_Cu = 8.96E-6/63.55   # molar weight is 8.96 g/micro-mole.   density is 63.55 g/cm3   end result has units micro-moles/cm3
+    molar_density_Bi = 9.78E-6/208.98  # molar weight is 208.78 g/micro-mole. density is 9.78 g/cm3    end result has units micro-moles/cm3
+    molar_density_C  = 2.0E-6/12.01    # molar weight is 12.01 g/micro-mole.  density is 2.0 g/cm3     end result has units micro-moles/cm3
+    molar_density_El = 1.35E-6/130     # m.w. NaH11O6 is 130 g/micro-mole.    density is 1.35 g/cm3    end result has units micro-moles/cm3
     
     A = np.zeros((3,3))
-    A[0,:] = [ sum_aMn_aEl - sum_aMn_aMn , sum_aMn_aEl - sum_aCu_aMn , sum_aMn_aEl - sum_aBi_aMn ]
-    A[1,:] = [ sum_aCu_aEl - sum_aCu_aMn , sum_aCu_aEl - sum_aCu_aCu , sum_aCu_aEl - sum_aBi_aCu ]
-    A[2,:] = [ sum_aBi_aEl - sum_aBi_aMn , sum_aBi_aEl - sum_aBi_aCu , sum_aBi_aEl - sum_aBi_aBi ]
+    A[0,:] = [ molar_density_El/molar_density_Mn*sum_aMn_aEl - sum_aMn_aMn , molar_density_El/molar_density_Cu*sum_aMn_aEl - sum_aCu_aMn , molar_density_El/molar_density_Bi*sum_aMn_aEl - sum_aBi_aMn ]
+    A[1,:] = [ molar_density_El/molar_density_Mn*sum_aCu_aEl - sum_aCu_aMn , molar_density_El/molar_density_Cu*sum_aCu_aEl - sum_aCu_aCu , molar_density_El/molar_density_Bi*sum_aCu_aEl - sum_aBi_aCu ]
+    A[2,:] = [ molar_density_El/molar_density_Mn*sum_aBi_aEl - sum_aBi_aMn , molar_density_El/molar_density_Cu*sum_aBi_aEl - sum_aBi_aCu , molar_density_El/molar_density_Bi*sum_aBi_aEl - sum_aBi_aBi ]
     
     b = np.zeros((3,1))
     
-    # Create some empty arrays
-    optical_thickness_Mn=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    optical_thickness_Cu=np.ones(ims[0,:,:].shape,dtype=np.float32)    
-    optical_thickness_Bi=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    optical_thickness_El=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    optical_thickness_C= np.ones(ims[0,:,:].shape,dtype=np.float32)*carbon_thickness   # in units of mm. This is set in stone, not optimized. I have the two PMMA films plus the carbon foil inside  I can't remember how thick the PMMA films are
+    # Create some empty arrays for the micro-moles / cm2
+    moles_Mn_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    moles_Cu_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)    
+    moles_Bi_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    moles_El_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+    moles_C_per_cm2 = carbon_thickness*1E-4/molar_density_C  # 1E4 to convert carbon_thickness from microns to cm      end result: micro-moles/cm2-surface-area
     
-    
+    # Solve the matrix equation A x = b where A is a 2D matrix of coefficients, x is a vertical array of [elemental massess],  b is a vertical array of constants
     for m in range(0,ims[0,:,:].shape[0]):
         if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
         sys.stdout.flush()
@@ -354,42 +363,44 @@ def calculate_optical_thickness(filename, carbon_thickness=0.15, total_thickness
             if np.where(ims[:,m,n]==0.12345678)[0].shape[0]==0:
                 ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
                 
-                b[0] = (total_thickness - optical_thickness_C[m,n])*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Mn*a_6520_C + a_6600_Mn*a_6600_C + a_8970_Mn*a_8970_C + a_9050_Mn*a_9050_C)
-                b[1] = (total_thickness - optical_thickness_C[m,n])*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Cu*a_6520_C + a_6600_Cu*a_6600_C + a_8970_Cu*a_8970_C + a_9050_Cu*a_9050_C)
-                b[2] = (total_thickness - optical_thickness_C[m,n])*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050) + optical_thickness_C[m,n]*(a_6520_Bi*a_6520_C + a_6600_Bi*a_6600_C + a_8970_Bi*a_8970_C + a_9050_Bi*a_9050_C)
-                
+                b[0] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aMn_aC - molar_density_El*sum_aMn_aEl) + molar_density_El*total_thickness*1E-4*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050)
+                b[1] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aCu_aC - molar_density_El*sum_aCu_aEl) + molar_density_El*total_thickness*1E-4*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050)
+                b[2] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aBi_aC - molar_density_El*sum_aBi_aEl) + molar_density_El*total_thickness*1E-4*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050)                
+
+                # Solve the system of linear equations
                 temp = np.linalg.solve(A, b)
-                #the above calculation produces optical thickness in mm, but below I convert it to microns!!!!
-                optical_thickness_Mn[m,n] = np.float32(temp[0])*1000.0
-                optical_thickness_Cu[m,n] = np.float32(temp[1])*1000.0
-                optical_thickness_Bi[m,n] = np.float32(temp[2])*1000.0
-                optical_thickness_C[m,n]  = carbon_thickness*1000.0      
-                optical_thickness_El[m,n] = total_thickness*1000.0 - optical_thickness_C[m,n] - optical_thickness_Mn[m,n] - optical_thickness_Cu[m,n] - optical_thickness_Bi[m,n]  #this produces optical thickness in microns         
+                
+                #the calculation produces micro-moles/cm2 for each component!!!
+                moles_Mn_per_cm2[m,n] = np.float32(temp[0])
+                moles_Cu_per_cm2[m,n] = np.float32(temp[1])
+                moles_Bi_per_cm2[m,n] = np.float32(temp[2])
+                moles_El_per_cm2[m,n] = molar_density_El*( total_thickness*1E-4 - carbon_thickness*1E-4 - moles_Mn_per_cm2[m,n]/molar_density_Mn - moles_Cu_per_cm2[m,n]/molar_density_Cu - moles_Bi_per_cm2[m,n]/molar_density_Bi)  #this produces optical thickness in microns         
             else:
-                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn[m,n],optical_thickness_Cu[m,n],optical_thickness_Bi[m,n],optical_thickness_C[m,n],optical_thickness_El[m,n])
-                optical_thickness_Mn[m,n] = 0.12345678;  
-                optical_thickness_Cu[m,n] = 0.12345678;  
-                optical_thickness_Bi[m,n] = 0.12345678;  
-                optical_thickness_C[m,n]  = 0.12345678;  
-                optical_thickness_El[m,n] = 0.12345678;  
+                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2[m,n],moles_Cu_per_cm2[m,n],moles_Bi_per_cm2[m,n],moles_C_per_cm2[m,n],moles_El_per_cm2[m,n])
+                moles_Mn_per_cm2[m,n] = 0.12345678;  
+                moles_Cu_per_cm2[m,n] = 0.12345678;  
+                moles_Bi_per_cm2[m,n] = 0.12345678;  
+                moles_El_per_cm2[m,n] = 0.12345678;  
             
     sys.stdout.flush()
     sys.stdout.write('\n')
     sys.stdout.flush()
                    
-    #check if the optical_thickness datasets are ALREADY in the h5object, and save data
-    h5object['optical_thickness_Mn'][:]=optical_thickness_Mn if 'optical_thickness_Mn' in h5object.keys()  else h5object.create_dataset('optical_thickness_Mn', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=optical_thickness_Mn)
-    h5object['optical_thickness_Cu'][:]=optical_thickness_Cu if 'optical_thickness_Cu' in h5object.keys()  else h5object.create_dataset('optical_thickness_Cu', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=optical_thickness_Cu)
-    h5object['optical_thickness_Bi'][:]=optical_thickness_Bi if 'optical_thickness_Bi' in h5object.keys()  else h5object.create_dataset('optical_thickness_Bi', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=optical_thickness_Bi)
-    h5object['optical_thickness_C' ][:]=optical_thickness_C  if 'optical_thickness_C'  in h5object.keys()  else h5object.create_dataset('optical_thickness_C' , shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=optical_thickness_C)
-    h5object['optical_thickness_El'][:]=optical_thickness_El if 'optical_thickness_El' in h5object.keys()  else h5object.create_dataset('optical_thickness_El', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=optical_thickness_El)
-    h5object.close()
+    #check if the elemental_moles datasets are ALREADY in the h5object, and save data
+    h5object['moles_Mn_per_cm2'][:]=moles_Mn_per_cm2 if 'moles_Mn_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Mn_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Mn_per_cm2)
+    h5object['moles_Cu_per_cm2'][:]=moles_Cu_per_cm2 if 'moles_Cu_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Cu_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Cu_per_cm2)
+    h5object['moles_Bi_per_cm2'][:]=moles_Bi_per_cm2 if 'moles_Bi_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Bi_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Bi_per_cm2)
+    h5object['moles_El_per_cm2'][:]=moles_El_per_cm2 if 'moles_El_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_El_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_El_per_cm2)
+    h5object['moles_C_per_cm2' ][:]=moles_C_per_cm2  if 'moles_C_per_cm2'  in h5object.keys()  else h5object.create_dataset('moles_C_per_cm2' , shape=(1,), dtype=np.float32, data=moles_C_per_cm2)
+    h5object['carbon_thickness'][:]=carbon_thickness if 'carbon_thickness' in h5object.keys()  else h5object.create_dataset('carbon_thickness', shape=(1,), dtype=np.float32, data=carbon_thickness)
+    h5object['total_thickness' ][:]=total_thickness  if 'total_thickness'  in h5object.keys()  else h5object.create_dataset('total_thickness' , shape=(1,), dtype=np.float32, data=total_thickness)
+    h5object.close() 
         
     
     
 
 
-# The variable image_used_for_plot is something like 'Mn_raw_im1' or 'optical_thickness_Bi' et cetera
+# The variable image_used_for_plot is something like 'Mn_raw_im1' or 'moles_Bi_per_cm2' et cetera
 def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
         
     # Read timestamps of the images, The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)
@@ -657,44 +668,45 @@ def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST
     xanes_ims     = np.array(h5object['xray_images'])
     xanes_ims[xanes_ims<=0.0]=np.median(xanes_ims[xanes_ims>0]) #so that np.log doesn't create an error
     # Grab the calculated thicknesses in microns
-    optical_thickness_Mn= np.array(h5object['optical_thickness_Mn'])
-    optical_thickness_Cu= np.array(h5object['optical_thickness_Cu'])
-    optical_thickness_Bi= np.array(h5object['optical_thickness_Bi'])
-    optical_thickness_C = np.array(h5object['optical_thickness_C'])
-    optical_thickness_El= np.array(h5object['optical_thickness_El'])
+    moles_Mn_per_cm2= np.array(h5object['moles_Mn_per_cm2'])
+    moles_Cu_per_cm2= np.array(h5object['moles_Cu_per_cm2'])
+    moles_Bi_per_cm2= np.array(h5object['moles_Bi_per_cm2'])
+    moles_C_per_cm2 = np.array(h5object['moles_C_per_cm2'])
+    moles_El_per_cm2= np.array(h5object['moles_El_per_cm2'])
     
-    # X-ray absorption coefficients in units of 1/mm converted to 1/micron by multiplying by 1000
-    a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
-    a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
-    a_6520_Bi = 389.43/1000;  a_6600_Bi = 377.563/1000; a_8970_Bi = 172.32/1000; a_9050_Bi = 168.434/1000;
-    a_6520_El = 3.254/1000;   a_6600_El = 3.136/1000;   a_8970_El = 1.229/1000;  a_9050_El = 1.1966/1000;  #1 part NaOH and 5 parts H2O (by mole ratios)
-    a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
+    # X-ray absorption coefficients in units of cm2/micro-moles 
+    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
     
     #Plot measured data as an image
     plt.scatter(beam_energies, xanes_ims[:,row,column],s=50*np.ones(4),marker='x')
     
     #Plot least-squares model results
-    plt.scatter(beam_energies, [np.exp(-a_6520_Mn*optical_thickness_Mn[row,column]), np.exp(-a_6600_Mn*optical_thickness_Mn[row,column]), np.exp(-a_8970_Mn*optical_thickness_Mn[row,column]), np.exp(-a_9050_Mn*optical_thickness_Mn[row,column])],marker='o',facecolors='none',edgecolors='r')
-    plt.scatter(beam_energies, [np.exp(-a_6520_Cu*optical_thickness_Cu[row,column]), np.exp(-a_6600_Cu*optical_thickness_Cu[row,column]), np.exp(-a_8970_Cu*optical_thickness_Cu[row,column]), np.exp(-a_9050_Cu*optical_thickness_Cu[row,column])],marker='o',facecolors='none',edgecolors='g')
-    plt.scatter(beam_energies, [np.exp(-a_6520_Bi*optical_thickness_Bi[row,column]), np.exp(-a_6600_Bi*optical_thickness_Bi[row,column]), np.exp(-a_8970_Bi*optical_thickness_Bi[row,column]), np.exp(-a_9050_Bi*optical_thickness_Bi[row,column])],marker='o',facecolors='none',edgecolors='b')
-    plt.scatter(beam_energies, [np.exp(-a_6520_C *optical_thickness_C[row,column] ), np.exp(-a_6600_C *optical_thickness_C[row,column]) , np.exp(-a_8970_C *optical_thickness_C[row,column]) , np.exp(-a_9050_C*optical_thickness_C[row,column] )], marker='o',facecolors='none',edgecolors='tab:pink')
-    plt.scatter(beam_energies, [np.exp(-a_6520_El*optical_thickness_El[row,column]), np.exp(-a_6600_El*optical_thickness_El[row,column]), np.exp(-a_8970_El*optical_thickness_El[row,column]), np.exp(-a_9050_El*optical_thickness_El[row,column])],marker='o',facecolors='none',edgecolors='tab:brown')
-    model_I_I0_6520=np.exp(-a_6520_Mn*optical_thickness_Mn[row,column] - a_6520_Cu*optical_thickness_Cu[row,column] - a_6520_Bi*optical_thickness_Bi[row,column] - a_6520_C*optical_thickness_C[row,column] - a_6520_El*optical_thickness_El[row,column])
-    model_I_I0_6600=np.exp(-a_6600_Mn*optical_thickness_Mn[row,column] - a_6600_Cu*optical_thickness_Cu[row,column] - a_6600_Bi*optical_thickness_Bi[row,column] - a_6600_C*optical_thickness_C[row,column] - a_6600_El*optical_thickness_El[row,column])
-    model_I_I0_8970=np.exp(-a_8970_Mn*optical_thickness_Mn[row,column] - a_8970_Cu*optical_thickness_Cu[row,column] - a_8970_Bi*optical_thickness_Bi[row,column] - a_8970_C*optical_thickness_C[row,column] - a_8970_El*optical_thickness_El[row,column])
-    model_I_I0_9050=np.exp(-a_9050_Mn*optical_thickness_Mn[row,column] - a_9050_Cu*optical_thickness_Cu[row,column] - a_9050_Bi*optical_thickness_Bi[row,column] - a_9050_C*optical_thickness_C[row,column] - a_9050_El*optical_thickness_El[row,column])
+    plt.scatter(beam_energies, [np.exp(-a_6520_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_6600_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_8970_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_9050_Mn*moles_Mn_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='r')
+    plt.scatter(beam_energies, [np.exp(-a_6520_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_6600_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_8970_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_9050_Cu*moles_Cu_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='g')
+    plt.scatter(beam_energies, [np.exp(-a_6520_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_6600_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_8970_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_9050_Bi*moles_Bi_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='b')
+    plt.scatter(beam_energies, [np.exp(-a_6520_C *moles_C_per_cm2[row,column] ), np.exp(-a_6600_C *moles_C_per_cm2[row,column]) , np.exp(-a_8970_C *moles_C_per_cm2[row,column]) , np.exp(-a_9050_C*moles_C_per_cm2[row,column] )], marker='o',facecolors='none',edgecolors='tab:pink')
+    plt.scatter(beam_energies, [np.exp(-a_6520_El*moles_El_per_cm2[row,column]), np.exp(-a_6600_El*moles_El_per_cm2[row,column]), np.exp(-a_8970_El*moles_El_per_cm2[row,column]), np.exp(-a_9050_El*moles_El_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='tab:brown')
+    model_I_I0_6520=np.exp(-a_6520_Mn*moles_Mn_per_cm2[row,column] - a_6520_Cu*moles_Cu_per_cm2[row,column] - a_6520_Bi*moles_Bi_per_cm2[row,column] - a_6520_C*moles_C_per_cm2[row,column] - a_6520_El*moles_El_per_cm2[row,column])
+    model_I_I0_6600=np.exp(-a_6600_Mn*moles_Mn_per_cm2[row,column] - a_6600_Cu*moles_Cu_per_cm2[row,column] - a_6600_Bi*moles_Bi_per_cm2[row,column] - a_6600_C*moles_C_per_cm2[row,column] - a_6600_El*moles_El_per_cm2[row,column])
+    model_I_I0_8970=np.exp(-a_8970_Mn*moles_Mn_per_cm2[row,column] - a_8970_Cu*moles_Cu_per_cm2[row,column] - a_8970_Bi*moles_Bi_per_cm2[row,column] - a_8970_C*moles_C_per_cm2[row,column] - a_8970_El*moles_El_per_cm2[row,column])
+    model_I_I0_9050=np.exp(-a_9050_Mn*moles_Mn_per_cm2[row,column] - a_9050_Cu*moles_Cu_per_cm2[row,column] - a_9050_Bi*moles_Bi_per_cm2[row,column] - a_9050_C*moles_C_per_cm2[row,column] - a_9050_El*moles_El_per_cm2[row,column])
     plt.scatter(beam_energies, [model_I_I0_6520 , model_I_I0_6600 , model_I_I0_8970 , model_I_I0_9050 ] ,marker='o',facecolors='none',edgecolors='tab:orange')
     plt.legend(['measured','model: Mn','model: Cu','model: Bi','model: C','model: El','model: Mn,Bi,Cu'])
+    plt.ylim((0,1.0))
 
     #plt.figure()
-    #plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [optical_thickness_Mn[row,column], optical_thickness_Cu[row,column], optical_thickness_Bi[row,column], optical_thickness_C[row,column], optical_thickness_El[row,column]])
+    #plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [moles_Mn_per_cm2[row,column], moles_Cu_per_cm2[row,column], moles_Bi_per_cm2[row,column], moles_C_per_cm2[row,column], moles_El_per_cm2[row,column]])
     print('Elemental thicknesses in microns.')
-    print('Mn: ' + str(optical_thickness_Mn[row,column]))
-    print('Cu: ' + str(optical_thickness_Cu[row,column]))
-    print('Bi: ' + str(optical_thickness_Bi[row,column]))
-    print('C: ' +  str(optical_thickness_C[row,column]))
-    print('El: ' + str(optical_thickness_El[row,column]))
-    print('total: '+ str(optical_thickness_Mn[row,column] + optical_thickness_Cu[row,column] + optical_thickness_Bi[row,column] + optical_thickness_C[row,column] + optical_thickness_El[row,column]))
+    print('Mn: ' + str(moles_Mn_per_cm2[row,column]))
+    print('Cu: ' + str(moles_Cu_per_cm2[row,column]))
+    print('Bi: ' + str(moles_Bi_per_cm2[row,column]))
+    print('C: ' +  str(moles_C_per_cm2[row,column]))
+    print('El: ' + str(moles_El_per_cm2[row,column]))
+    print('total: '+ str(moles_Mn_per_cm2[row,column] + moles_Cu_per_cm2[row,column] + moles_Bi_per_cm2[row,column] + moles_C_per_cm2[row,column] + moles_El_per_cm2[row,column]))
 
     
     plt.figure()
@@ -767,32 +779,32 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     if which_image == 'all':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none': 
-            xray_images = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-        optical_thickness_Mn = np.array(h5object['optical_thickness_Mn'])
-        optical_thickness_Cu = np.array(h5object['optical_thickness_Cu'])
-        optical_thickness_Bi = np.array(h5object['optical_thickness_Bi'])
-        optical_thickness_C  = np.array(h5object['optical_thickness_C'])
-        optical_thickness_El = np.array(h5object['optical_thickness_El'])
+            xray_images = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+        moles_Mn_per_cm2 = np.array(h5object['moles_Mn_per_cm2'])
+        moles_Cu_per_cm2 = np.array(h5object['moles_Cu_per_cm2'])
+        moles_Bi_per_cm2 = np.array(h5object['moles_Bi_per_cm2'])
+        moles_C_per_cm2  = np.array(h5object['moles_C_per_cm2'])
+        moles_El_per_cm2 = np.array(h5object['moles_El_per_cm2'])
         h5object.close()
-        return(np.stack((xray_images,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)))
+        return(np.stack((xray_images,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2)))
     
     if which_image == 'xray_images':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none': 
-            xray_images[0,:,:] = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images[1,:,:] = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images[2,:,:] = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
-            xray_images[3,:,:] = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images[0,:,:] = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images[1,:,:] = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images[2,:,:] = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
+            xray_images[3,:,:] = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
         h5object.close()
         return(xray_images)
 
     if which_image == '6520' or which_image == 'Mn_raw_im1':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none':
-            xray_images[0,:,:] = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images[0,:,:] = remove_elements_from_TXM_image(xray_images[0,:,:], '6520', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[0,:,:]
         h5object.close()
@@ -801,7 +813,7 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     if which_image == '6600' or which_image == 'Mn_raw_im2':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none':
-            xray_images[1,:,:] = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images[1,:,:] = remove_elements_from_TXM_image(xray_images[1,:,:], '6600', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[1,:,:]
         h5object.close()
@@ -810,7 +822,7 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     if which_image == '8970' or which_image == 'Cu_raw_im1':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none':
-            xray_images[2,:,:] = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images[2,:,:] = remove_elements_from_TXM_image(xray_images[2,:,:], '8970', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[2,:,:]
         h5object.close()
@@ -819,59 +831,59 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     if which_image == '9050' or which_image == 'Cu_raw_im2':
         xray_images = np.array(h5object['xray_images'])
         if remove_elements != 'none':
-            xray_images[3,:,:] = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['optical_thickness_Mn']), np.array(h5object['optical_thickness_Cu']), np.array(h5object['optical_thickness_Bi']), remove_elements)
+            xray_images[3,:,:] = remove_elements_from_TXM_image(xray_images[3,:,:], '9050', np.array(h5object['moles_Mn_per_cm2']), np.array(h5object['moles_Cu_per_cm2']), np.array(h5object['moles_Bi_per_cm2']), remove_elements)
         returned_image = np.ones((xray_images.shape[1],xray_images.shape[2],1),dtype=xray_images.dtype)
         returned_image[:,:,0] = xray_images[3,:,:]
         h5object.close()
         return(returned_image)
     
     if which_image == 'all_thickness':
-        temp = np.stack((np.array(h5object['optical_thickness_Mn']),np.array(h5object['optical_thickness_Cu']),np.array(h5object['optical_thickness_Bi']),np.array(h5object['optical_thickness_C']),np.array(h5object['optical_thickness_El'])))
+        temp = np.stack((np.array(h5object['moles_Mn_per_cm2']),np.array(h5object['moles_Cu_per_cm2']),np.array(h5object['moles_Bi_per_cm2']),np.array(h5object['moles_C_per_cm2']),np.array(h5object['moles_El_per_cm2'])))
         h5object.close()
         return(temp)
         
-    if which_image == 'Mn_thickness' or which_image == 'Mn' or which_image == 'optical_thickness_Mn' or which_image == 'thickness_Mn':
-        im = np.array(h5object['optical_thickness_Mn'])
+    if which_image == 'Mn_thickness' or which_image == 'Mn' or which_image == 'moles_Mn_per_cm2' or which_image == 'thickness_Mn':
+        im = np.array(h5object['moles_Mn_per_cm2'])
         h5object.close()
         returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
-    if which_image == 'Cu_thickness' or which_image == 'Cu' or which_image == 'optical_thickness_Cu' or which_image == 'thickness_Cu':
-        im = np.array(h5object['optical_thickness_Cu'])
+    if which_image == 'Cu_thickness' or which_image == 'Cu' or which_image == 'moles_Cu_per_cm2' or which_image == 'thickness_Cu':
+        im = np.array(h5object['moles_Cu_per_cm2'])
         h5object.close()
         returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
-    if which_image == 'Bi_thickness' or which_image == 'Bi' or which_image == 'optical_thickness_Bi' or which_image == 'thickness_Bi':
-        im = np.array(h5object['optical_thickness_Bi'])
+    if which_image == 'Bi_thickness' or which_image == 'Bi' or which_image == 'moles_Bi_per_cm2' or which_image == 'thickness_Bi':
+        im = np.array(h5object['moles_Bi_per_cm2'])
         h5object.close()
         returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
-    if which_image == 'C_thickness'  or which_image == 'C' or which_image == 'optical_thickness_C' or which_image == 'thickness_C':
-        im = np.array(h5object['optical_thickness_C'])
+    if which_image == 'C_thickness'  or which_image == 'C' or which_image == 'moles_C_per_cm2' or which_image == 'thickness_C':
+        im = np.array(h5object['moles_C_per_cm2'])
         h5object.close()
         returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
-    if which_image == 'El_thickness' or which_image == 'El' or which_image == 'optical_thickness_El' or which_image == 'thickness_El':
-        im = np.array(h5object['optical_thickness_El'])
+    if which_image == 'El_thickness' or which_image == 'El' or which_image == 'moles_El_per_cm2' or which_image == 'thickness_El':
+        im = np.array(h5object['moles_El_per_cm2'])
         h5object.close()
         returned_image = np.ones((im.shape[0],im.shape[1],1),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
         return(returned_image)
         
     if which_image == 'elemental_RGB' or which_image == 'elemental_rgb':
-        im = np.array(h5object['optical_thickness_Mn'])
+        im = np.array(h5object['moles_Mn_per_cm2'])
         returned_image = np.ones((im.shape[0],im.shape[1],3),dtype=im.dtype)
         returned_image[:,:,0] = im[:,:]
-        im = np.array(h5object['optical_thickness_Cu'])
+        im = np.array(h5object['moles_Cu_per_cm2'])
         returned_image[:,:,1] = im[:,:]
-        im = np.array(h5object['optical_thickness_Bi'])
+        im = np.array(h5object['moles_Bi_per_cm2'])
         returned_image[:,:,2] = im[:,:]
         h5object.close()
         return(returned_image)
@@ -882,12 +894,13 @@ def get_processed_image(filename, which_image, remove_elements='none'):
     
         
 def remove_elements_from_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, remove_elements):        
-    # X-ray absorption coefficients in units of 1/microns 
-    a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
-    a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
-    a_6520_Bi = 389.43/1000;  a_6600_Bi = 377.563/1000; a_8970_Bi = 172.32/1000; a_9050_Bi = 168.434/1000;
-    a_6520_El = 3.254/1000;   a_6600_El = 3.136/1000;   a_8970_El = 1.229/1000;  a_9050_El = 1.1966/1000;  #1 part NaOH and 5 parts H2O (by mole ratios)
-    a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
+
+    # X-ray absorption coefficients in units of cm2/micro-moles 
+    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
         
     mask = np.where(thicknesses_Mn==0.12345678)
     
@@ -913,12 +926,13 @@ def remove_elements_from_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_
 
         
 def insert_elements_into_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, which_elements):        
-    # X-ray absorption coefficients in units of 1/microns 
-    a_6520_Mn = 31.573/1000;  a_6600_Mn = 207.698/1000; a_8970_Mn = 94.641/1000; a_9050_Mn = 92.436/1000;
-    a_6520_Cu = 85.1/1000;    a_6600_Cu = 82.9/1000;    a_8970_Cu = 34/1000;     a_9050_Cu = 265/1000;
-    a_6520_Bi = 389.43/1000;  a_6600_Bi = 377.563/1000; a_8970_Bi = 172.32/1000; a_9050_Bi = 168.434/1000;
-    a_6520_El = 3.254/1000;   a_6600_El = 3.136/1000;   a_8970_El = 1.229/1000;  a_9050_El = 1.1966/1000;  #1 part NaOH and 5 parts H2O (by mole ratios)
-    a_6520_C  = 1.8278/1000;  a_6600_C  = 1.759/1000;   a_8970_C  = 0.6759/1000; a_9050_C  = 0.6577/1000;
+
+    # X-ray absorption coefficients in units of cm2/micro-moles 
+    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
         
     mask = np.where(thicknesses_Mn==0.12345678)
     
@@ -946,41 +960,41 @@ def insert_elements_into_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_
 
     
 
-def dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El):
+def dS_dthickness_all(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2):
     test_sum_squares = np.zeros(8)
     
     #Calculate the test case sum of squared errors
-    optical_thickness_Mn1 = optical_thickness_Mn + 0.00001
-    test_sum_squares[0] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn1,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-    optical_thickness_Mn1 = optical_thickness_Mn - 0.00001
-    test_sum_squares[1] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn1,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+    moles_Mn_per_cm21 = moles_Mn_per_cm2 + 0.00001
+    test_sum_squares[0] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm21,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2)
+    moles_Mn_per_cm21 = moles_Mn_per_cm2 - 0.00001
+    test_sum_squares[1] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm21,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2)
     
-    optical_thickness_Cu1 = optical_thickness_Cu + 0.00001
-    test_sum_squares[2] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu1,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
-    optical_thickness_Cu1 = optical_thickness_Cu - 0.00001
-    test_sum_squares[3] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu1,optical_thickness_Bi,optical_thickness_C,optical_thickness_El)
+    moles_Cu_per_cm21 = moles_Cu_per_cm2 + 0.00001
+    test_sum_squares[2] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm21,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2)
+    moles_Cu_per_cm21 = moles_Cu_per_cm2 - 0.00001
+    test_sum_squares[3] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm21,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2)
 
-    optical_thickness_Bi1 = optical_thickness_Bi + 0.00001
-    test_sum_squares[4] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi1,optical_thickness_C,optical_thickness_El)
-    optical_thickness_Bi1 = optical_thickness_Bi - 0.00001
-    test_sum_squares[5] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi1,optical_thickness_C,optical_thickness_El)
+    moles_Bi_per_cm21 = moles_Bi_per_cm2 + 0.00001
+    test_sum_squares[4] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm21,moles_C_per_cm2,moles_El_per_cm2)
+    moles_Bi_per_cm21 = moles_Bi_per_cm2 - 0.00001
+    test_sum_squares[5] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm21,moles_C_per_cm2,moles_El_per_cm2)
 
-    optical_thickness_El1 = optical_thickness_El + 0.00001
-    test_sum_squares[6] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El1)
-    optical_thickness_El1 = optical_thickness_El - 0.00001
-    test_sum_squares[7] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El1)
+    moles_El_per_cm21 = moles_El_per_cm2 + 0.00001
+    test_sum_squares[6] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm21)
+    moles_El_per_cm21 = moles_El_per_cm2 - 0.00001
+    test_sum_squares[7] = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm21)
 
     return(test_sum_squares)
     
     
     
     
-def calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,optical_thickness_Mn,optical_thickness_Cu,optical_thickness_Bi,optical_thickness_C,optical_thickness_El):
+def calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2,moles_Cu_per_cm2,moles_Bi_per_cm2,moles_C_per_cm2,moles_El_per_cm2):
     #Calculate the baseline sum of squared errors
-    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*optical_thickness_Mn + a_6520_Cu*optical_thickness_Cu + a_6520_Bi*optical_thickness_Bi + a_6520_C*optical_thickness_C + a_6520_El*optical_thickness_El)**2
-    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*optical_thickness_Mn + a_6600_Cu*optical_thickness_Cu + a_6600_Bi*optical_thickness_Bi + a_6600_C*optical_thickness_C + a_6600_El*optical_thickness_El)**2
-    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*optical_thickness_Mn + a_8970_Cu*optical_thickness_Cu + a_8970_Bi*optical_thickness_Bi + a_8970_C*optical_thickness_C + a_8970_El*optical_thickness_El)**2
-    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*optical_thickness_Mn + a_9050_Cu*optical_thickness_Cu + a_9050_Bi*optical_thickness_Bi + a_9050_C*optical_thickness_C + a_9050_El*optical_thickness_El)**2
+    sum_squares_6520=(ln_I_I0_6520 + a_6520_Mn*moles_Mn_per_cm2 + a_6520_Cu*moles_Cu_per_cm2 + a_6520_Bi*moles_Bi_per_cm2 + a_6520_C*moles_C_per_cm2 + a_6520_El*moles_El_per_cm2)**2
+    sum_squares_6600=(ln_I_I0_6600 + a_6600_Mn*moles_Mn_per_cm2 + a_6600_Cu*moles_Cu_per_cm2 + a_6600_Bi*moles_Bi_per_cm2 + a_6600_C*moles_C_per_cm2 + a_6600_El*moles_El_per_cm2)**2
+    sum_squares_8970=(ln_I_I0_8970 + a_8970_Mn*moles_Mn_per_cm2 + a_8970_Cu*moles_Cu_per_cm2 + a_8970_Bi*moles_Bi_per_cm2 + a_8970_C*moles_C_per_cm2 + a_8970_El*moles_El_per_cm2)**2
+    sum_squares_9050=(ln_I_I0_9050 + a_9050_Mn*moles_Mn_per_cm2 + a_9050_Cu*moles_Cu_per_cm2 + a_9050_Bi*moles_Bi_per_cm2 + a_9050_C*moles_C_per_cm2 + a_9050_El*moles_El_per_cm2)**2
     baseline_sum_square_error = sum_squares_6520 + sum_squares_6600 + sum_squares_8970 + sum_squares_9050
     return(baseline_sum_square_error)
 
@@ -1113,11 +1127,11 @@ def debuffer_multiple_image_files(scan_numbers):
         h5object_old.copy('scan_time',     h5object_new)
         h5object_old.copy('note',          h5object_new)
         h5object_old.copy('translations',  h5object_new)
-        if 'optical_thickness_Mn' in h5object_old.keys(): h5object_old.copy('optical_thickness_Mn', h5object_new)
-        if 'optical_thickness_Cu' in h5object_old.keys(): h5object_old.copy('optical_thickness_Cu', h5object_new)
-        if 'optical_thickness_Bi' in h5object_old.keys(): h5object_old.copy('optical_thickness_Bi', h5object_new)
-        if 'optical_thickness_C' in h5object_old.keys():  h5object_old.copy('optical_thickness_C', h5object_new)
-        if 'optical_thickness_El' in h5object_old.keys(): h5object_old.copy('optical_thickness_El', h5object_new)
+        if 'moles_Mn_per_cm2' in h5object_old.keys(): h5object_old.copy('moles_Mn_per_cm2', h5object_new)
+        if 'moles_Cu_per_cm2' in h5object_old.keys(): h5object_old.copy('moles_Cu_per_cm2', h5object_new)
+        if 'moles_Bi_per_cm2' in h5object_old.keys(): h5object_old.copy('moles_Bi_per_cm2', h5object_new)
+        if 'moles_C_per_cm2' in h5object_old.keys():  h5object_old.copy('moles_C_per_cm2', h5object_new)
+        if 'moles_El_per_cm2' in h5object_old.keys(): h5object_old.copy('moles_El_per_cm2', h5object_new)
         xanes_ims = np.array(h5object_old['xray_images'])
         h5object_old.close()
         xanes_ims2 = np.zeros((4,      -debuffer[2]+debuffer[3] , -debuffer[0]+debuffer[1]),dtype=np.float32)
