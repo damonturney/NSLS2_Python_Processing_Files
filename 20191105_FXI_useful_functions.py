@@ -89,19 +89,30 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # calculate_debuffer_multiple_images(ims): return(debuffer_all_images)
 # calculate_image_debuffer_multiple_files(scan_numbers):  return(debuffer_multi_file)
 # get_images_statistics(scan_numbers, image_type_2_show ): return(images_mean, images_std) 
-# def deflicker_one_scan_file(target_scan_number , other_scan_numbers_in_baseline , gaussian_filter_sizes , remove_elements='no'):
+# deflicker_using_4_neighbors_time_series(target_scan_number , four_neigbhors , gaussian_filter_sizes ):
+# deflicker_using_average_image_elements_removed(target_scan_number , averaged_image_filename , gaussian_filter_size , beam_energy,  remove_elements):
+# deflicker_9050_using_8970(scan_numbers):
 ###########################################################
 
 
 ### Workflow ##############################################
 # NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
-# 0) make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5')  to create average darkfield image for the 5 sec exposed images (Mn) and 2.5s exposed images (Cu):  
-# 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34875.h5','ave_dark_2p5s_exposure_34565_34875.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
+# 0) make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5') to create average darkfield image for the 5 sec exposed images (Mn) and make_average_image((range(34566,34725,2), 'img_dark',  'ave_dark_2p5s_exposure_34566_34724.h5') 2.5s exposed images (Cu):  
+# 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34873.h5','ave_dark_2p5s_exposure_34566_34724.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
 # 2) align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_elemental_moles_per_cm2(i);   
-# 3) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
-# 4) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
-# 5) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'BiMn')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
-# 5) deflicker_xray_images(range(34565,34725,2),[100,100,50,50],background_image='ave_8970_34565_34725_Bi_and_Mn_removed.h5')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray image
+# 3) deflicker_xray_images_time_series(range(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
+# 4) deflicker_9050_using_8970(scan_numbers): to deflicker the 9050 images by calculating the difference between the 8970 and 9050 images and looking for when the 9050 are brighter than it should be
+# 5) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
+
+#  MAYBE USE LONGER TIME SERIES FOR DEFLICKERING!  YOU SHOULD LOOK AT A TIME SERIES OF BLURRED BRIGHTNESS .  THERE APPEARS TO BE 5 STATES OF THE PARTICLES.  DOES BRIGHTNESS CHANGE FOR EACH OF THESE STATES?  IF NOT, THEN YOU CAN USE A VERRRRY LONG TIMER SERIES FOR DEFLICKERING!
+
+# 5) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'Bi')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
+# 6) deflicker_using_average_image_elements_removed(34703,'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 50, '8970', 'BiCu')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray imagedeflicker the 8970 eV images after removing Bi and Cu from the 8970 eV images
+# 8) maybe deflicker by time series again?
+# 9) Calculate the location of the elements by using the simpler calculation that uses just two images for Mn, and two images for Cu.
+
+# 
+# 5) 
 # 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 ############################################################
 
@@ -286,22 +297,22 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
 
   
   
-def deflicker_xray_images(scan_numbers , gaussian_filter_sizes):
+def deflicker_xray_images_time_series(scan_numbers , gaussian_filter_sizes):
     i=0
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_using_4_neighbors_one_scan_file(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes)
+    deflicker_using_4_neighbors_time_series(scan_numbers[i],[scan_numbers[i+1], scan_numbers[i+1], scan_numbers[i+2], scan_numbers[i+3]],gaussian_filter_sizes)
     i=1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_using_4_neighbors_one_scan_file(scan_numbers[i],[scan_numbers[i-1], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
+    deflicker_using_4_neighbors_time_series(scan_numbers[i],[scan_numbers[i-1], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
     for i in range(2,len(scan_numbers)-2):
         print('de-flickering ' + str(scan_numbers[i])) 
-        deflicker_using_4_neighbors_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
+        deflicker_using_4_neighbors_time_series(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+2]],gaussian_filter_sizes)
     i=i+1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_using_4_neighbors_one_scan_file(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]],gaussian_filter_sizes)
+    deflicker_using_4_neighbors_time_series(scan_numbers[i],[scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i+1], scan_numbers[i+1]],gaussian_filter_sizes)
     i=i+1
     print('de-flickering ' + str(scan_numbers[i])) 
-    deflicker_using_4_neighbors_one_scan_file(scan_numbers[i],[scan_numbers[i-3], scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i-1]],gaussian_filter_sizes)
+    deflicker_using_4_neighbors_time_series(scan_numbers[i],[scan_numbers[i-3], scan_numbers[i-2], scan_numbers[i-1], scan_numbers[i-1]],gaussian_filter_sizes)
     
     
     
@@ -315,7 +326,7 @@ def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thic
     ims     = np.array(h5object['xray_images'])
     ims[ims<=0.0]=0.00001 #so that np.log doesn't create an error
     
-    # X-ray absorption coefficients in units of cm2/micro-moles 
+    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
     a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
     a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
     a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
@@ -335,11 +346,11 @@ def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thic
     sum_aCu_aC  = (a_6520_Cu*a_6520_C  + a_6600_Cu*a_6600_C  + a_8970_Cu*a_8970_C  + a_9050_Cu*a_9050_C )
     sum_aBi_aC  = (a_6520_Bi*a_6520_C  + a_6600_Bi*a_6600_C  + a_8970_Bi*a_8970_C  + a_9050_Bi*a_9050_C )
     
-    molar_density_Mn = 7.3E-6/54.94    # molar weight is 7.3 g/micro-mole.    density is 54.94 g/cm3   end result has units micro-moles/cm3
-    molar_density_Cu = 8.96E-6/63.55   # molar weight is 8.96 g/micro-mole.   density is 63.55 g/cm3   end result has units micro-moles/cm3
-    molar_density_Bi = 9.78E-6/208.98  # molar weight is 208.78 g/micro-mole. density is 9.78 g/cm3    end result has units micro-moles/cm3
-    molar_density_C  = 2.0E-6/12.01    # molar weight is 12.01 g/micro-mole.  density is 2.0 g/cm3     end result has units micro-moles/cm3
-    molar_density_El = 1.35E-6/130     # m.w. NaH11O6 is 130 g/micro-mole.    density is 1.35 g/cm3    end result has units micro-moles/cm3
+    molar_density_Mn = 7.3/54.94  *1E6  # molar weight is 7.3    g/mole.    density is 54.94 g/cm3   end result has units micro-moles/cm3
+    molar_density_Cu = 8.96/63.6  *1E6  # molar weight is 8.96   g/mole.    density is 63.55 g/cm3   end result has units micro-moles/cm3
+    molar_density_Bi = 9.8/209.0  *1E6  # molar weight is 208.78 g/mole.    density is 9.78 g/cm3    end result has units micro-moles/cm3
+    molar_density_C  = 2.0/12.01  *1E6  # molar weight is 12.01  g/mole.    density is 2.0 g/cm3     end result has units micro-moles/cm3
+    molar_density_El = 1.35/130   *1E6  # m.w. NaH11O6 is 130    g/mole.    density is 1.35 g/cm3    end result has units micro-moles/cm3
     
     A = np.zeros((3,3))
     A[0,:] = [ molar_density_El/molar_density_Mn*sum_aMn_aEl - sum_aMn_aMn , molar_density_El/molar_density_Cu*sum_aMn_aEl - sum_aCu_aMn , molar_density_El/molar_density_Bi*sum_aMn_aEl - sum_aBi_aMn ]
@@ -353,7 +364,7 @@ def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thic
     moles_Cu_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)    
     moles_Bi_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
     moles_El_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    moles_C_per_cm2 = carbon_thickness*1E-4/molar_density_C  # 1E4 to convert carbon_thickness from microns to cm      end result: micro-moles/cm2-surface-area
+    moles_C_per_cm2 = carbon_thickness*1E-4*molar_density_C  # 1E4 to convert carbon_thickness from microns to cm      end result: micro-moles/cm2-surface-area
     
     # Solve the matrix equation A x = b where A is a 2D matrix of coefficients, x is a vertical array of [elemental massess],  b is a vertical array of constants
     for m in range(0,ims[0,:,:].shape[0]):
@@ -363,9 +374,9 @@ def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thic
             if np.where(ims[:,m,n]==0.12345678)[0].shape[0]==0:
                 ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
                 
-                b[0] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aMn_aC - molar_density_El*sum_aMn_aEl) + molar_density_El*total_thickness*1E-4*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050)
-                b[1] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aCu_aC - molar_density_El*sum_aCu_aEl) + molar_density_El*total_thickness*1E-4*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050)
-                b[2] =   carbon_thickness*1E-4*(molar_density_carbon*sum_aBi_aC - molar_density_El*sum_aBi_aEl) + molar_density_El*total_thickness*1E-4*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050)                
+                b[0] =   carbon_thickness*1E-4*(molar_density_C*sum_aMn_aC - molar_density_El*sum_aMn_aEl) + molar_density_El*total_thickness*1E-4*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050)
+                b[1] =   carbon_thickness*1E-4*(molar_density_C*sum_aCu_aC - molar_density_El*sum_aCu_aEl) + molar_density_El*total_thickness*1E-4*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050)
+                b[2] =   carbon_thickness*1E-4*(molar_density_C*sum_aBi_aC - molar_density_El*sum_aBi_aEl) + molar_density_El*total_thickness*1E-4*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050)                
 
                 # Solve the system of linear equations
                 temp = np.linalg.solve(A, b)
@@ -376,7 +387,7 @@ def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thic
                 moles_Bi_per_cm2[m,n] = np.float32(temp[2])
                 moles_El_per_cm2[m,n] = molar_density_El*( total_thickness*1E-4 - carbon_thickness*1E-4 - moles_Mn_per_cm2[m,n]/molar_density_Mn - moles_Cu_per_cm2[m,n]/molar_density_Cu - moles_Bi_per_cm2[m,n]/molar_density_Bi)  #this produces optical thickness in microns         
             else:
-                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2[m,n],moles_Cu_per_cm2[m,n],moles_Bi_per_cm2[m,n],moles_C_per_cm2[m,n],moles_El_per_cm2[m,n])
+                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2[m,n],moles_Cu_per_cm2[m,n],moles_Bi_per_cm2[m,n],moles_C_per_cm2,moles_El_per_cm2[m,n])
                 moles_Mn_per_cm2[m,n] = 0.12345678;  
                 moles_Cu_per_cm2[m,n] = 0.12345678;  
                 moles_Bi_per_cm2[m,n] = 0.12345678;  
@@ -674,7 +685,7 @@ def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST
     moles_C_per_cm2 = np.array(h5object['moles_C_per_cm2'])
     moles_El_per_cm2= np.array(h5object['moles_El_per_cm2'])
     
-    # X-ray absorption coefficients in units of cm2/micro-moles 
+    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
     a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
     a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
     a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
@@ -688,25 +699,25 @@ def plot_single_pixel_least_squares_data(filename,row,column):   # Filename MUST
     plt.scatter(beam_energies, [np.exp(-a_6520_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_6600_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_8970_Mn*moles_Mn_per_cm2[row,column]), np.exp(-a_9050_Mn*moles_Mn_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='r')
     plt.scatter(beam_energies, [np.exp(-a_6520_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_6600_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_8970_Cu*moles_Cu_per_cm2[row,column]), np.exp(-a_9050_Cu*moles_Cu_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='g')
     plt.scatter(beam_energies, [np.exp(-a_6520_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_6600_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_8970_Bi*moles_Bi_per_cm2[row,column]), np.exp(-a_9050_Bi*moles_Bi_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='b')
-    plt.scatter(beam_energies, [np.exp(-a_6520_C *moles_C_per_cm2[row,column] ), np.exp(-a_6600_C *moles_C_per_cm2[row,column]) , np.exp(-a_8970_C *moles_C_per_cm2[row,column]) , np.exp(-a_9050_C*moles_C_per_cm2[row,column] )], marker='o',facecolors='none',edgecolors='tab:pink')
+    plt.scatter(beam_energies, [np.exp(-a_6520_C *moles_C_per_cm2)             , np.exp(-a_6600_C *moles_C_per_cm2)             , np.exp(-a_8970_C *moles_C_per_cm2)             , np.exp(-a_9050_C*moles_C_per_cm2)              ],marker='o',facecolors='none',edgecolors='tab:pink')
     plt.scatter(beam_energies, [np.exp(-a_6520_El*moles_El_per_cm2[row,column]), np.exp(-a_6600_El*moles_El_per_cm2[row,column]), np.exp(-a_8970_El*moles_El_per_cm2[row,column]), np.exp(-a_9050_El*moles_El_per_cm2[row,column])],marker='o',facecolors='none',edgecolors='tab:brown')
-    model_I_I0_6520=np.exp(-a_6520_Mn*moles_Mn_per_cm2[row,column] - a_6520_Cu*moles_Cu_per_cm2[row,column] - a_6520_Bi*moles_Bi_per_cm2[row,column] - a_6520_C*moles_C_per_cm2[row,column] - a_6520_El*moles_El_per_cm2[row,column])
-    model_I_I0_6600=np.exp(-a_6600_Mn*moles_Mn_per_cm2[row,column] - a_6600_Cu*moles_Cu_per_cm2[row,column] - a_6600_Bi*moles_Bi_per_cm2[row,column] - a_6600_C*moles_C_per_cm2[row,column] - a_6600_El*moles_El_per_cm2[row,column])
-    model_I_I0_8970=np.exp(-a_8970_Mn*moles_Mn_per_cm2[row,column] - a_8970_Cu*moles_Cu_per_cm2[row,column] - a_8970_Bi*moles_Bi_per_cm2[row,column] - a_8970_C*moles_C_per_cm2[row,column] - a_8970_El*moles_El_per_cm2[row,column])
-    model_I_I0_9050=np.exp(-a_9050_Mn*moles_Mn_per_cm2[row,column] - a_9050_Cu*moles_Cu_per_cm2[row,column] - a_9050_Bi*moles_Bi_per_cm2[row,column] - a_9050_C*moles_C_per_cm2[row,column] - a_9050_El*moles_El_per_cm2[row,column])
+    model_I_I0_6520=np.exp(-a_6520_Mn*moles_Mn_per_cm2[row,column] - a_6520_Cu*moles_Cu_per_cm2[row,column] - a_6520_Bi*moles_Bi_per_cm2[row,column] - a_6520_C*moles_C_per_cm2 - a_6520_El*moles_El_per_cm2[row,column])
+    model_I_I0_6600=np.exp(-a_6600_Mn*moles_Mn_per_cm2[row,column] - a_6600_Cu*moles_Cu_per_cm2[row,column] - a_6600_Bi*moles_Bi_per_cm2[row,column] - a_6600_C*moles_C_per_cm2 - a_6600_El*moles_El_per_cm2[row,column])
+    model_I_I0_8970=np.exp(-a_8970_Mn*moles_Mn_per_cm2[row,column] - a_8970_Cu*moles_Cu_per_cm2[row,column] - a_8970_Bi*moles_Bi_per_cm2[row,column] - a_8970_C*moles_C_per_cm2 - a_8970_El*moles_El_per_cm2[row,column])
+    model_I_I0_9050=np.exp(-a_9050_Mn*moles_Mn_per_cm2[row,column] - a_9050_Cu*moles_Cu_per_cm2[row,column] - a_9050_Bi*moles_Bi_per_cm2[row,column] - a_9050_C*moles_C_per_cm2 - a_9050_El*moles_El_per_cm2[row,column])
     plt.scatter(beam_energies, [model_I_I0_6520 , model_I_I0_6600 , model_I_I0_8970 , model_I_I0_9050 ] ,marker='o',facecolors='none',edgecolors='tab:orange')
     plt.legend(['measured','model: Mn','model: Cu','model: Bi','model: C','model: El','model: Mn,Bi,Cu'])
     plt.ylim((0,1.0))
 
     #plt.figure()
-    #plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [moles_Mn_per_cm2[row,column], moles_Cu_per_cm2[row,column], moles_Bi_per_cm2[row,column], moles_C_per_cm2[row,column], moles_El_per_cm2[row,column]])
+    #plt.scatter(['Mn', 'Cu', 'Bi', 'C', 'El' ], [moles_Mn_per_cm2[row,column], moles_Cu_per_cm2[row,column], moles_Bi_per_cm2[row,column], moles_C_per_cm2, moles_El_per_cm2[row,column]])
     print('Elemental thicknesses in microns.')
     print('Mn: ' + str(moles_Mn_per_cm2[row,column]))
     print('Cu: ' + str(moles_Cu_per_cm2[row,column]))
     print('Bi: ' + str(moles_Bi_per_cm2[row,column]))
-    print('C: ' +  str(moles_C_per_cm2[row,column]))
+    print('C: ' +  str(moles_C_per_cm2))
     print('El: ' + str(moles_El_per_cm2[row,column]))
-    print('total: '+ str(moles_Mn_per_cm2[row,column] + moles_Cu_per_cm2[row,column] + moles_Bi_per_cm2[row,column] + moles_C_per_cm2[row,column] + moles_El_per_cm2[row,column]))
+    print('total: '+ str(moles_Mn_per_cm2[row,column] + moles_Cu_per_cm2[row,column] + moles_Bi_per_cm2[row,column] + moles_C_per_cm2 + moles_El_per_cm2[row,column]))
 
     
     plt.figure()
@@ -895,7 +906,7 @@ def get_processed_image(filename, which_image, remove_elements='none'):
         
 def remove_elements_from_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, remove_elements):        
 
-    # X-ray absorption coefficients in units of cm2/micro-moles 
+    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
     a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
     a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
     a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
@@ -927,7 +938,7 @@ def remove_elements_from_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_
         
 def insert_elements_into_TXM_image(im, beam_energy, thicknesses_Mn, thicknesses_Cu, thicknesses_Bi, which_elements):        
 
-    # X-ray absorption coefficients in units of cm2/micro-moles 
+    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
     a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
     a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
     a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
@@ -1237,7 +1248,7 @@ def get_images_statistics(scan_numbers, image_type_2_show ):
 
 
 
-def deflicker_using_4_neighbors_one_scan_file(target_scan_number , four_neigbhors , gaussian_filter_sizes ):
+def deflicker_using_4_neighbors_time_series(target_scan_number , four_neigbhors , gaussian_filter_sizes ):
                                                                                               # beam_energy can be 'all' or '6520' or '6600' or '8970' or '9050'
     # Get the target image
     target_image = get_processed_image(target_scan_number, 'xray_images',      'none'    )
@@ -1316,6 +1327,53 @@ def deflicker_using_average_image_elements_removed(target_scan_number , averaged
     h5object.close()
     
 
+    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
+    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
 
 
+def deflicker_9050_using_8970(scan_numbers):
     
+    for i in range(0,len(scan_numbers)):
+        image_8970 = get_processed_image(scan_numbers[i], '8970')[:,:,0]
+        image_9050 = get_processed_image(scan_numbers[i], '9050')[:,:,0]
+        mask1 = np.where(image_8970==0.12345678)
+        mask2 = np.where(image_9050==0.12345678)
+        
+        #If no copper is present, the ratio ln(9050)/ln(8970) should be greater than ~0.97 (note: ln(x) between x=0 and x=1 grows larger in absolute magnitude as x->0).  If the ratio is smaller than 0.97, then the 9050 image needs fixing
+        difference = np.log(image_9050)/np.log(image_8970) 
+        difference = scipy.ndimage.uniform_filter(difference, size=3, mode='constant')
+        difference[mask1]=1.0
+        difference[mask2]=1.0  
+        difference[np.where(difference<0.0)]=0.0  
+        difference[np.where(difference>3.0)]=3.0  
+        
+        #Make an image with the pixels that have difference values that cannot be physically correct
+        correction = np.ones((image_8970.shape))
+        correction[np.where(difference<0.975)] = difference[np.where(difference<0.975)] 
+        correction[mask1]=1.0
+        correction[mask2]=1.0 
+        
+        #Make a blurred image of the correction
+        blurred_correction = scipy.ndimage.gaussian_filter(correction,sigma=20,mode='reflect')
+        blurred_correction[mask1]=1.0
+        blurred_correction[mask2]=1.0
+        
+        image_9050 = image_9050*blurred_correction
+        filename="%.4f" % scan_numbers[i]
+        filename_string = 'processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'    
+        h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
+        h5object['xray_images'][3,:,:] = image_9050      
+        h5object.close()
+        
+
+        
+        
+        
+        
+        
+        
+        
