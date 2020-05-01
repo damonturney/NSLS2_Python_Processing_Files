@@ -1340,6 +1340,8 @@ def deflicker_9050_using_8970(scan_numbers):
     for i in range(0,len(scan_numbers)):
         image_8970 = get_processed_image(scan_numbers[i], '8970')[:,:,0]
         image_9050 = get_processed_image(scan_numbers[i], '9050')[:,:,0]
+        image_8970[np.where(image_8970<0.000001)]=0.000001
+        image_9050[np.where(image_9050<0.000001)]=0.000001
         mask1 = np.where(image_8970==0.12345678)
         mask2 = np.where(image_9050==0.12345678)
         
