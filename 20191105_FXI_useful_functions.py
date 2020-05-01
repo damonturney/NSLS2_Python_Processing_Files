@@ -152,86 +152,89 @@ def make_average_image(scan_numbers, which_image, output_filename , remove_eleme
 
 
 # Filename MUST be supplied as a number  #cc_search_distance is [left, right, top, bottom]
-def internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
-    Cu_filename=Mn_filename+1
-    Mn_filename_string="%.4f" % Mn_filename
-    Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
-    h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
-    h5object_new = h5py.File(data_directory+data_subdirectory+'processed_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
-    h5object_new.create_dataset('data_processing_note1', dtype=h5py.string_dtype(), data='internally_align_h5_file(Mn_h5file,'+str(im2_cropping)+','+str(cc_search_distance)+','+str(average_dark_image_filename_Mn)+','+str(average_dark_image_filename_Cu)+')')
-    h5object_old.copy('scan_id',  h5object_new)
-    h5object_old.copy('note',     h5object_new)
-    h5object_old.close()
-    scan_start_time_string, scan_time1, beam_energies_Mn, scan_id, notes = read_FXI_raw_h5_metadata(Mn_filename)
-    scan_start_time_string, scan_time2, beam_energies_Cu, scan_id, notes = read_FXI_raw_h5_metadata(Cu_filename)
-    h5object_new.create_dataset('scan_time', shape=(1,),   dtype=np.float64, data=np.mean((scan_time1,scan_time2)))
+def internally_align_h5_file(Mn_filenames, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]
+    for i in range(0,len(Mn_filenames)):
+        Mn_filename = Mn_filenames[i]
+        print(Mn_filename)    
+        Cu_filename=Mn_filename+1
+        Mn_filename_string="%.4f" % Mn_filename
+        Mn_filename_string='multipos_2D_xanes_scan2_id_'+Mn_filename_string[0:5]+'_repeat_'+Mn_filename_string[6:8]+'_pos_'+Mn_filename_string[8:10]+'.h5'
+        h5object_old = h5py.File(data_directory+data_subdirectory+Mn_filename_string, 'r')    
+        h5object_new = h5py.File(data_directory+data_subdirectory+'processed_images_'+Mn_filename_string[27:-3]+'.h5', 'w')
+        h5object_new.create_dataset('data_processing_note1', dtype=h5py.string_dtype(), data='internally_align_h5_file(Mn_h5file,'+str(im2_cropping)+','+str(cc_search_distance)+','+str(average_dark_image_filename_Mn)+','+str(average_dark_image_filename_Cu)+')')
+        h5object_old.copy('scan_id',  h5object_new)
+        h5object_old.copy('note',     h5object_new)
+        h5object_old.close()
+        scan_start_time_string, scan_time1, beam_energies_Mn, scan_id, notes = read_FXI_raw_h5_metadata(Mn_filename)
+        scan_start_time_string, scan_time2, beam_energies_Cu, scan_id, notes = read_FXI_raw_h5_metadata(Cu_filename)
+        h5object_new.create_dataset('scan_time', shape=(1,),   dtype=np.float64, data=np.mean((scan_time1,scan_time2)))
+        
+        buffer_edges = 100
+        
+        # Shift the 2nd Mn image to be aligned with the 1st Mn image
+        Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
+        if average_dark_image_filename_Mn != 'none':
+            temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Mn, 'r')
+            average_dark_image_Mn = np.array(temp_obj['average_image'])[0,:,:]
+            temp_obj.close()
+            im_dark = get_raw_image(Mn_filename,'img_dark')[0,:,:]
+            im_bkg  = get_raw_image(Mn_filename,'img_bkg')
+            Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[0,:,:] - average_dark_image_Mn)
+            Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[1,:,:] - average_dark_image_Mn)
+        translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
+        # Add a buffer of dummy values so that we don't lose data when we shift
+        Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+        Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+        # Now actually do the  shift.  Use -translation to put it back to where it should be (aligned with im1)
+        Mn_im2_buffered_aligned = shift_image_integer(Mn_im2_buffered, -translation1)
+        #Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.12345678, prefilter=True)
+        # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
+        Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.12345678
+        Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+        Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.12345678
+        Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
+        
+        # Shift the Cu images to be aligned with the 1st Mn image
+        Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
+        if average_dark_image_filename_Cu != 'none':
+            temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Cu, 'r')
+            average_dark_image_Cu = np.array(temp_obj['average_image'])[0,:,:]
+            temp_obj.close()
+            im_dark = get_raw_image(Cu_filename,'img_dark')[0,:,:]
+            im_bkg  = get_raw_image(Cu_filename,'img_bkg')
+            Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[0,:,:] - average_dark_image_Cu)
+            Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[1,:,:] - average_dark_image_Cu)    
+        translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
+        translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
+        # Add a buffer of dummy values so that we don't lose data when we shift
+        Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+        Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
+        # Now actually do the  shift
+        Cu_im1_buffered_aligned = shift_image_integer(Cu_im1_buffered, -translation2)
+        Cu_im2_buffered_aligned = shift_image_integer(Cu_im2_buffered, -translation3)
+        #Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.12345678, prefilter=True)
+        #Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.12345678, prefilter=True)
     
-    buffer_edges = 100
-    
-    # Shift the 2nd Mn image to be aligned with the 1st Mn image
-    Mn_ims = get_raw_image(Mn_filename,'img_xanes'); 
-    if average_dark_image_filename_Mn != 'none':
-        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Mn, 'r')
-        average_dark_image_Mn = np.array(temp_obj['average_image'])[0,:,:]
-        temp_obj.close()
-        im_dark = get_raw_image(Mn_filename,'img_dark')[0,:,:]
-        im_bkg  = get_raw_image(Mn_filename,'img_bkg')
-        Mn_ims[0,:,:] = ((Mn_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[0,:,:] - average_dark_image_Mn)
-        Mn_ims[1,:,:] = ((Mn_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Mn ) / (im_bkg[1,:,:] - average_dark_image_Mn)
-    translation1, error, cc_image = find_image_translation(Mn_ims[0,:,:],Mn_ims[1,:,:], im2_cropping, cc_search_distance)
-    # Add a buffer of dummy values so that we don't lose data when we shift
-    Mn_im1_buffered = np.pad(Mn_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
-    Mn_im2_buffered = np.pad(Mn_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
-    # Now actually do the  shift.  Use -translation to put it back to where it should be (aligned with im1)
-    Mn_im2_buffered_aligned = shift_image_integer(Mn_im2_buffered, -translation1)
-    #Mn_im2_buffered_aligned = scipy.ndimage.shift(Mn_im2_buffered, -translation1, order=3, mode='constant', cval=0.12345678, prefilter=True)
-    # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Mn_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation1[1]))] = 0.12345678
-    Mn_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation1[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
-    Mn_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation1[0])),:] = 0.12345678
-    Mn_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation1[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
-    
-    # Shift the Cu images to be aligned with the 1st Mn image
-    Cu_ims = get_raw_image(Cu_filename,'img_xanes');  
-    if average_dark_image_filename_Cu != 'none':
-        temp_obj = h5py.File(data_directory+data_subdirectory+average_dark_image_filename_Cu, 'r')
-        average_dark_image_Cu = np.array(temp_obj['average_image'])[0,:,:]
-        temp_obj.close()
-        im_dark = get_raw_image(Cu_filename,'img_dark')[0,:,:]
-        im_bkg  = get_raw_image(Cu_filename,'img_bkg')
-        Cu_ims[0,:,:] = ((Cu_ims[0,:,:] * (im_bkg[0,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[0,:,:] - average_dark_image_Cu)
-        Cu_ims[1,:,:] = ((Cu_ims[1,:,:] * (im_bkg[1,:,:] - im_dark) +  im_dark ) - average_dark_image_Cu ) / (im_bkg[1,:,:] - average_dark_image_Cu)    
-    translation2, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[0,:,:], im2_cropping, cc_search_distance)
-    translation3, error, cc_image = find_image_translation(Mn_ims[0,:,:],Cu_ims[1,:,:], im2_cropping, cc_search_distance)
-    # Add a buffer of dummy values so that we don't lose data when we shift
-    Cu_im1_buffered = np.pad(Cu_ims[0,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
-    Cu_im2_buffered = np.pad(Cu_ims[1,:,:], buffer_edges, 'constant', constant_values=0.12345678 ) 
-    # Now actually do the  shift
-    Cu_im1_buffered_aligned = shift_image_integer(Cu_im1_buffered, -translation2)
-    Cu_im2_buffered_aligned = shift_image_integer(Cu_im2_buffered, -translation3)
-    #Cu_im1_buffered_aligned = scipy.ndimage.shift(Cu_im1_buffered, -translation2, order=3, mode='constant', cval=0.12345678, prefilter=True)
-    #Cu_im2_buffered_aligned = scipy.ndimage.shift(Cu_im2_buffered, -translation3, order=3, mode='constant', cval=0.12345678, prefilter=True)
-
-    # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
-    Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.12345678
-    Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation2[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
-    Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(-translation2[0])),:] = 0.12345678
-    Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(-translation2[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
-    Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation3[1]))] = 0.12345678
-    Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation3[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
-    Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation3[0])),:] = 0.12345678
-    Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation3[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
-    
-    # Collect an concatenate the data into single matrices
-    beam_energies = np.concatenate((beam_energies_Mn, beam_energies_Cu))
-    ims_buffered_aligned = np.stack((Mn_im1_buffered,Mn_im2_buffered_aligned,Cu_im1_buffered_aligned,Cu_im2_buffered_aligned))
-    
-    # Stuff the data into the h5 file
-    h5object_new.create_dataset('translations', shape=(4,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3,[-1,-1])))
-    h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
-    h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
-    h5object_old.close()
-    h5object_new.close()
+        # Now reset the dummy values because the shift command used spline fitting and messed up some of the dummy values
+        Cu_im1_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation2[1]))] = 0.12345678
+        Cu_im1_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation2[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+        Cu_im1_buffered_aligned[0:buffer_edges + np.int(np.round(-translation2[0])),:] = 0.12345678
+        Cu_im1_buffered_aligned[  buffer_edges + np.int(np.round(-translation2[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
+        Cu_im2_buffered_aligned[:,0:buffer_edges + np.int(np.round(-translation3[1]))] = 0.12345678
+        Cu_im2_buffered_aligned[:,  buffer_edges + np.int(np.round(-translation3[1])) + Mn_ims[0,:,:].shape[1]:] = 0.12345678
+        Cu_im2_buffered_aligned[0:buffer_edges + np.int(np.round(-translation3[0])),:] = 0.12345678
+        Cu_im2_buffered_aligned[  buffer_edges + np.int(np.round(-translation3[0])) + Mn_ims[0,:,:].shape[0]:,:] = 0.12345678
+        
+        # Collect an concatenate the data into single matrices
+        beam_energies = np.concatenate((beam_energies_Mn, beam_energies_Cu))
+        ims_buffered_aligned = np.stack((Mn_im1_buffered,Mn_im2_buffered_aligned,Cu_im1_buffered_aligned,Cu_im2_buffered_aligned))
+        
+        # Stuff the data into the h5 file
+        h5object_new.create_dataset('translations', shape=(4,2),   dtype=np.float64, data=np.stack((translation1,translation2,translation3,[-1,-1])))
+        h5object_new.create_dataset('beam_energies', shape=(4,1), dtype=np.float64, data=beam_energies)
+        h5object_new.create_dataset('xray_images', shape=(4 , Mn_ims[0,:,:].shape[0] + 2*buffer_edges , Mn_ims[0,:,:].shape[1] + 2*buffer_edges), dtype=np.float32, data=ims_buffered_aligned)
+        h5object_old.close()
+        h5object_new.close()
     
   
     
@@ -318,94 +321,97 @@ def deflicker_xray_images_time_series(scan_numbers , gaussian_filter_sizes):
     
     
 # Run this function on the files output from save_aligned_h5_file     #All input length units are in microns.  All output units are micro-moles/cm2
-def calculate_elemental_moles_per_cm2(filename, carbon_thickness=175, total_thickness=250): #Run this on the files output from save_aligned_h5_file
-    if type(filename) != str:
-        filename="%.4f" % filename
-        filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
-    h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
-    ims     = np.array(h5object['xray_images'])
-    ims[ims<=0.0]=0.00001 #so that np.log doesn't create an error
+def calculate_elemental_moles_per_cm2(filenames, carbon_thickness=175, total_thickness=250): #Run this on the files output from save_aligned_h5_file
+    for i in range(0,len(filenames)):
+        filename = filenames[i]
+        print(filename)     
+        if type(filename) != str:
+            filename="%.4f" % filename
+            filename='processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'
+        h5object= h5py.File(data_directory+data_subdirectory+filename, 'r+')
+        ims     = np.array(h5object['xray_images'])
+        ims[ims<=0.0]=0.00001 #so that np.log doesn't create an error
+        
+        # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
+        a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
+        a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
+        a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
+        a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
+        a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
+        
+        sum_aMn_aEl = (a_6520_Mn*a_6520_El + a_6600_Mn*a_6600_El + a_8970_Mn*a_8970_El + a_9050_Mn*a_9050_El)
+        sum_aCu_aEl = (a_6520_Cu*a_6520_El + a_6600_Cu*a_6600_El + a_8970_Cu*a_8970_El + a_9050_Cu*a_9050_El)
+        sum_aBi_aEl = (a_6520_Bi*a_6520_El + a_6600_Bi*a_6600_El + a_8970_Bi*a_8970_El + a_9050_Bi*a_9050_El)
+        sum_aMn_aMn = (a_6520_Mn*a_6520_Mn + a_6600_Mn*a_6600_Mn + a_8970_Mn*a_8970_Mn + a_9050_Mn*a_9050_Mn)
+        sum_aCu_aMn = (a_6520_Cu*a_6520_Mn + a_6600_Cu*a_6600_Mn + a_8970_Cu*a_8970_Mn + a_9050_Cu*a_9050_Mn)
+        sum_aBi_aMn = (a_6520_Bi*a_6520_Mn + a_6600_Bi*a_6600_Mn + a_8970_Bi*a_8970_Mn + a_9050_Bi*a_9050_Mn)
+        sum_aBi_aCu = (a_6520_Cu*a_6520_Bi + a_6600_Cu*a_6600_Bi + a_8970_Cu*a_8970_Bi + a_9050_Cu*a_9050_Bi)
+        sum_aCu_aCu = (a_6520_Cu*a_6520_Cu + a_6600_Cu*a_6600_Cu + a_8970_Cu*a_8970_Cu + a_9050_Cu*a_9050_Cu)
+        sum_aBi_aBi = (a_6520_Bi*a_6520_Bi + a_6600_Bi*a_6600_Bi + a_8970_Bi*a_8970_Bi + a_9050_Bi*a_9050_Bi)
+        sum_aMn_aC  = (a_6520_Mn*a_6520_C  + a_6600_Mn*a_6600_C  + a_8970_Mn*a_8970_C  + a_9050_Mn*a_9050_C )
+        sum_aCu_aC  = (a_6520_Cu*a_6520_C  + a_6600_Cu*a_6600_C  + a_8970_Cu*a_8970_C  + a_9050_Cu*a_9050_C )
+        sum_aBi_aC  = (a_6520_Bi*a_6520_C  + a_6600_Bi*a_6600_C  + a_8970_Bi*a_8970_C  + a_9050_Bi*a_9050_C )
+        
+        molar_density_Mn = 7.3/54.94  *1E6  # molar weight is 7.3    g/mole.    density is 54.94 g/cm3   end result has units micro-moles/cm3
+        molar_density_Cu = 8.96/63.6  *1E6  # molar weight is 8.96   g/mole.    density is 63.55 g/cm3   end result has units micro-moles/cm3
+        molar_density_Bi = 9.8/209.0  *1E6  # molar weight is 208.78 g/mole.    density is 9.78 g/cm3    end result has units micro-moles/cm3
+        molar_density_C  = 2.0/12.01  *1E6  # molar weight is 12.01  g/mole.    density is 2.0 g/cm3     end result has units micro-moles/cm3
+        molar_density_El = 1.35/130   *1E6  # m.w. NaH11O6 is 130    g/mole.    density is 1.35 g/cm3    end result has units micro-moles/cm3
+        
+        A = np.zeros((3,3))
+        A[0,:] = [ molar_density_El/molar_density_Mn*sum_aMn_aEl - sum_aMn_aMn , molar_density_El/molar_density_Cu*sum_aMn_aEl - sum_aCu_aMn , molar_density_El/molar_density_Bi*sum_aMn_aEl - sum_aBi_aMn ]
+        A[1,:] = [ molar_density_El/molar_density_Mn*sum_aCu_aEl - sum_aCu_aMn , molar_density_El/molar_density_Cu*sum_aCu_aEl - sum_aCu_aCu , molar_density_El/molar_density_Bi*sum_aCu_aEl - sum_aBi_aCu ]
+        A[2,:] = [ molar_density_El/molar_density_Mn*sum_aBi_aEl - sum_aBi_aMn , molar_density_El/molar_density_Cu*sum_aBi_aEl - sum_aBi_aCu , molar_density_El/molar_density_Bi*sum_aBi_aEl - sum_aBi_aBi ]
+        
+        b = np.zeros((3,1))
+        
+        # Create some empty arrays for the micro-moles / cm2
+        moles_Mn_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+        moles_Cu_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)    
+        moles_Bi_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+        moles_El_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
+        moles_C_per_cm2 = carbon_thickness*1E-4*molar_density_C  # 1E4 to convert carbon_thickness from microns to cm      end result: micro-moles/cm2-surface-area
+        
+        # Solve the matrix equation A x = b where A is a 2D matrix of coefficients, x is a vertical array of [elemental massess],  b is a vertical array of constants
+        for m in range(0,ims[0,:,:].shape[0]):
+            if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
+            sys.stdout.flush()
+            for n in range(0,ims[0,:,:].shape[1]): 
+                if np.where(ims[:,m,n]==0.12345678)[0].shape[0]==0:
+                    ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
+                    
+                    b[0] =   carbon_thickness*1E-4*(molar_density_C*sum_aMn_aC - molar_density_El*sum_aMn_aEl) + molar_density_El*total_thickness*1E-4*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050)
+                    b[1] =   carbon_thickness*1E-4*(molar_density_C*sum_aCu_aC - molar_density_El*sum_aCu_aEl) + molar_density_El*total_thickness*1E-4*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050)
+                    b[2] =   carbon_thickness*1E-4*(molar_density_C*sum_aBi_aC - molar_density_El*sum_aBi_aEl) + molar_density_El*total_thickness*1E-4*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050)                
     
-    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
-    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
-    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
-    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
-    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
-    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
-    
-    sum_aMn_aEl = (a_6520_Mn*a_6520_El + a_6600_Mn*a_6600_El + a_8970_Mn*a_8970_El + a_9050_Mn*a_9050_El)
-    sum_aCu_aEl = (a_6520_Cu*a_6520_El + a_6600_Cu*a_6600_El + a_8970_Cu*a_8970_El + a_9050_Cu*a_9050_El)
-    sum_aBi_aEl = (a_6520_Bi*a_6520_El + a_6600_Bi*a_6600_El + a_8970_Bi*a_8970_El + a_9050_Bi*a_9050_El)
-    sum_aMn_aMn = (a_6520_Mn*a_6520_Mn + a_6600_Mn*a_6600_Mn + a_8970_Mn*a_8970_Mn + a_9050_Mn*a_9050_Mn)
-    sum_aCu_aMn = (a_6520_Cu*a_6520_Mn + a_6600_Cu*a_6600_Mn + a_8970_Cu*a_8970_Mn + a_9050_Cu*a_9050_Mn)
-    sum_aBi_aMn = (a_6520_Bi*a_6520_Mn + a_6600_Bi*a_6600_Mn + a_8970_Bi*a_8970_Mn + a_9050_Bi*a_9050_Mn)
-    sum_aBi_aCu = (a_6520_Cu*a_6520_Bi + a_6600_Cu*a_6600_Bi + a_8970_Cu*a_8970_Bi + a_9050_Cu*a_9050_Bi)
-    sum_aCu_aCu = (a_6520_Cu*a_6520_Cu + a_6600_Cu*a_6600_Cu + a_8970_Cu*a_8970_Cu + a_9050_Cu*a_9050_Cu)
-    sum_aBi_aBi = (a_6520_Bi*a_6520_Bi + a_6600_Bi*a_6600_Bi + a_8970_Bi*a_8970_Bi + a_9050_Bi*a_9050_Bi)
-    sum_aMn_aC  = (a_6520_Mn*a_6520_C  + a_6600_Mn*a_6600_C  + a_8970_Mn*a_8970_C  + a_9050_Mn*a_9050_C )
-    sum_aCu_aC  = (a_6520_Cu*a_6520_C  + a_6600_Cu*a_6600_C  + a_8970_Cu*a_8970_C  + a_9050_Cu*a_9050_C )
-    sum_aBi_aC  = (a_6520_Bi*a_6520_C  + a_6600_Bi*a_6600_C  + a_8970_Bi*a_8970_C  + a_9050_Bi*a_9050_C )
-    
-    molar_density_Mn = 7.3/54.94  *1E6  # molar weight is 7.3    g/mole.    density is 54.94 g/cm3   end result has units micro-moles/cm3
-    molar_density_Cu = 8.96/63.6  *1E6  # molar weight is 8.96   g/mole.    density is 63.55 g/cm3   end result has units micro-moles/cm3
-    molar_density_Bi = 9.8/209.0  *1E6  # molar weight is 208.78 g/mole.    density is 9.78 g/cm3    end result has units micro-moles/cm3
-    molar_density_C  = 2.0/12.01  *1E6  # molar weight is 12.01  g/mole.    density is 2.0 g/cm3     end result has units micro-moles/cm3
-    molar_density_El = 1.35/130   *1E6  # m.w. NaH11O6 is 130    g/mole.    density is 1.35 g/cm3    end result has units micro-moles/cm3
-    
-    A = np.zeros((3,3))
-    A[0,:] = [ molar_density_El/molar_density_Mn*sum_aMn_aEl - sum_aMn_aMn , molar_density_El/molar_density_Cu*sum_aMn_aEl - sum_aCu_aMn , molar_density_El/molar_density_Bi*sum_aMn_aEl - sum_aBi_aMn ]
-    A[1,:] = [ molar_density_El/molar_density_Mn*sum_aCu_aEl - sum_aCu_aMn , molar_density_El/molar_density_Cu*sum_aCu_aEl - sum_aCu_aCu , molar_density_El/molar_density_Bi*sum_aCu_aEl - sum_aBi_aCu ]
-    A[2,:] = [ molar_density_El/molar_density_Mn*sum_aBi_aEl - sum_aBi_aMn , molar_density_El/molar_density_Cu*sum_aBi_aEl - sum_aBi_aCu , molar_density_El/molar_density_Bi*sum_aBi_aEl - sum_aBi_aBi ]
-    
-    b = np.zeros((3,1))
-    
-    # Create some empty arrays for the micro-moles / cm2
-    moles_Mn_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    moles_Cu_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)    
-    moles_Bi_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    moles_El_per_cm2=np.ones(ims[0,:,:].shape,dtype=np.float32)
-    moles_C_per_cm2 = carbon_thickness*1E-4*molar_density_C  # 1E4 to convert carbon_thickness from microns to cm      end result: micro-moles/cm2-surface-area
-    
-    # Solve the matrix equation A x = b where A is a 2D matrix of coefficients, x is a vertical array of [elemental massess],  b is a vertical array of constants
-    for m in range(0,ims[0,:,:].shape[0]):
-        if np.mod(m,10)==0: sys.stdout.write('\rLeast Squares, Row: '+str(m))
+                    # Solve the system of linear equations
+                    temp = np.linalg.solve(A, b)
+                    
+                    #the calculation produces micro-moles/cm2 for each component!!!
+                    moles_Mn_per_cm2[m,n] = np.float32(temp[0])
+                    moles_Cu_per_cm2[m,n] = np.float32(temp[1])
+                    moles_Bi_per_cm2[m,n] = np.float32(temp[2])
+                    moles_El_per_cm2[m,n] = molar_density_El*( total_thickness*1E-4 - carbon_thickness*1E-4 - moles_Mn_per_cm2[m,n]/molar_density_Mn - moles_Cu_per_cm2[m,n]/molar_density_Cu - moles_Bi_per_cm2[m,n]/molar_density_Bi)  #this produces optical thickness in microns         
+                else:
+                    #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2[m,n],moles_Cu_per_cm2[m,n],moles_Bi_per_cm2[m,n],moles_C_per_cm2,moles_El_per_cm2[m,n])
+                    moles_Mn_per_cm2[m,n] = 0.12345678;  
+                    moles_Cu_per_cm2[m,n] = 0.12345678;  
+                    moles_Bi_per_cm2[m,n] = 0.12345678;  
+                    moles_El_per_cm2[m,n] = 0.12345678;  
+                
         sys.stdout.flush()
-        for n in range(0,ims[0,:,:].shape[1]): 
-            if np.where(ims[:,m,n]==0.12345678)[0].shape[0]==0:
-                ln_I_I0_6520 = np.log(ims[0,m,n]);  ln_I_I0_6600 = np.log(ims[1,m,n]); ln_I_I0_8970 = np.log(ims[2,m,n]); ln_I_I0_9050 = np.log(ims[3,m,n]);
-                
-                b[0] =   carbon_thickness*1E-4*(molar_density_C*sum_aMn_aC - molar_density_El*sum_aMn_aEl) + molar_density_El*total_thickness*1E-4*sum_aMn_aEl + (a_6520_Mn*ln_I_I0_6520 + a_6600_Mn*ln_I_I0_6600 + a_8970_Mn*ln_I_I0_8970 + a_9050_Mn*ln_I_I0_9050)
-                b[1] =   carbon_thickness*1E-4*(molar_density_C*sum_aCu_aC - molar_density_El*sum_aCu_aEl) + molar_density_El*total_thickness*1E-4*sum_aCu_aEl + (a_6520_Cu*ln_I_I0_6520 + a_6600_Cu*ln_I_I0_6600 + a_8970_Cu*ln_I_I0_8970 + a_9050_Cu*ln_I_I0_9050)
-                b[2] =   carbon_thickness*1E-4*(molar_density_C*sum_aBi_aC - molar_density_El*sum_aBi_aEl) + molar_density_El*total_thickness*1E-4*sum_aBi_aEl + (a_6520_Bi*ln_I_I0_6520 + a_6600_Bi*ln_I_I0_6600 + a_8970_Bi*ln_I_I0_8970 + a_9050_Bi*ln_I_I0_9050)                
-
-                # Solve the system of linear equations
-                temp = np.linalg.solve(A, b)
-                
-                #the calculation produces micro-moles/cm2 for each component!!!
-                moles_Mn_per_cm2[m,n] = np.float32(temp[0])
-                moles_Cu_per_cm2[m,n] = np.float32(temp[1])
-                moles_Bi_per_cm2[m,n] = np.float32(temp[2])
-                moles_El_per_cm2[m,n] = molar_density_El*( total_thickness*1E-4 - carbon_thickness*1E-4 - moles_Mn_per_cm2[m,n]/molar_density_Mn - moles_Cu_per_cm2[m,n]/molar_density_Cu - moles_Bi_per_cm2[m,n]/molar_density_Bi)  #this produces optical thickness in microns         
-            else:
-                #sum_square_errors1 = calculate_sum_square_errors(ln_I_I0_6520,ln_I_I0_6600,ln_I_I0_8970,ln_I_I0_9050,a_6520_Mn,a_6600_Mn,a_8970_Mn,a_9050_Mn,a_6520_Cu,a_6600_Cu,a_8970_Cu,a_9050_Cu,a_6520_Bi,a_6600_Bi,a_8970_Bi,a_9050_Bi,a_6520_C,a_6600_C,a_8970_C,a_9050_C,a_6520_El,a_6600_El,a_8970_El,a_9050_El,moles_Mn_per_cm2[m,n],moles_Cu_per_cm2[m,n],moles_Bi_per_cm2[m,n],moles_C_per_cm2,moles_El_per_cm2[m,n])
-                moles_Mn_per_cm2[m,n] = 0.12345678;  
-                moles_Cu_per_cm2[m,n] = 0.12345678;  
-                moles_Bi_per_cm2[m,n] = 0.12345678;  
-                moles_El_per_cm2[m,n] = 0.12345678;  
-            
-    sys.stdout.flush()
-    sys.stdout.write('\n')
-    sys.stdout.flush()
-                   
-    #check if the elemental_moles datasets are ALREADY in the h5object, and save data
-    h5object['moles_Mn_per_cm2'][:]=moles_Mn_per_cm2 if 'moles_Mn_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Mn_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Mn_per_cm2)
-    h5object['moles_Cu_per_cm2'][:]=moles_Cu_per_cm2 if 'moles_Cu_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Cu_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Cu_per_cm2)
-    h5object['moles_Bi_per_cm2'][:]=moles_Bi_per_cm2 if 'moles_Bi_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Bi_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Bi_per_cm2)
-    h5object['moles_El_per_cm2'][:]=moles_El_per_cm2 if 'moles_El_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_El_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_El_per_cm2)
-    h5object['moles_C_per_cm2' ][:]=moles_C_per_cm2  if 'moles_C_per_cm2'  in h5object.keys()  else h5object.create_dataset('moles_C_per_cm2' , shape=(1,), dtype=np.float32, data=moles_C_per_cm2)
-    h5object['carbon_thickness'][:]=carbon_thickness if 'carbon_thickness' in h5object.keys()  else h5object.create_dataset('carbon_thickness', shape=(1,), dtype=np.float32, data=carbon_thickness)
-    h5object['total_thickness' ][:]=total_thickness  if 'total_thickness'  in h5object.keys()  else h5object.create_dataset('total_thickness' , shape=(1,), dtype=np.float32, data=total_thickness)
-    h5object.close() 
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+                       
+        #check if the elemental_moles datasets are ALREADY in the h5object, and save data
+        h5object['moles_Mn_per_cm2'][:]=moles_Mn_per_cm2 if 'moles_Mn_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Mn_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Mn_per_cm2)
+        h5object['moles_Cu_per_cm2'][:]=moles_Cu_per_cm2 if 'moles_Cu_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Cu_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Cu_per_cm2)
+        h5object['moles_Bi_per_cm2'][:]=moles_Bi_per_cm2 if 'moles_Bi_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_Bi_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_Bi_per_cm2)
+        h5object['moles_El_per_cm2'][:]=moles_El_per_cm2 if 'moles_El_per_cm2' in h5object.keys()  else h5object.create_dataset('moles_El_per_cm2', shape=(ims.shape[1],ims.shape[2]), dtype=np.float32, data=moles_El_per_cm2)
+        h5object['moles_C_per_cm2' ][:]=moles_C_per_cm2  if 'moles_C_per_cm2'  in h5object.keys()  else h5object.create_dataset('moles_C_per_cm2' , shape=(1,), dtype=np.float32, data=moles_C_per_cm2)
+        h5object['carbon_thickness'][:]=carbon_thickness if 'carbon_thickness' in h5object.keys()  else h5object.create_dataset('carbon_thickness', shape=(1,), dtype=np.float32, data=carbon_thickness)
+        h5object['total_thickness' ][:]=total_thickness  if 'total_thickness'  in h5object.keys()  else h5object.create_dataset('total_thickness' , shape=(1,), dtype=np.float32, data=total_thickness)
+        h5object.close() 
         
     
     
@@ -1291,52 +1297,48 @@ def deflicker_using_4_neighbors_time_series(target_scan_number , four_neigbhors 
 
 
                                                                                                                                       #remove_elements can be 'Mn' or 'BiMn'
-def deflicker_using_average_image_elements_removed(target_scan_number , averaged_image_filename , gaussian_filter_size , beam_energy,  remove_elements):
-                                                                                                                       # beam_energy can be '6520' or '6600' or '8970' or '9050'
-    # Get the target image
-    target_image                  = get_processed_image(target_scan_number, 'xray_images',      'none'    )
-    target_image_elements_removed = get_processed_image(target_scan_number, 'xray_images', remove_elements)
-    
-    temp_obj = h5py.File(data_directory+data_subdirectory+averaged_image_filename, 'r')
-    averaged_image_elements_removed = np.array(temp_obj['average_image'])
-    
-    # Calculate the fractional difference between the target image and the baseline image(s)
-    if beam_energy=='6520': x=0
-    if beam_energy=='6600': x=1
-    if beam_energy=='8970': x=2
-    if beam_energy=='9050': x=3
-    fractional_difference = (target_image_elements_removed[x,:,:] - averaged_image_elements_removed)/averaged_image_elements_removed
-    fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
-    fractional_difference[fractional_difference<-0.5] = 0.0
-    mask = np.where(target_image_elements_removed[x,:,:]==0.12345678)
-    fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
-    
-    # Blur the fractional difference image and then use it to correct the target_image_elements_removed, 
-    blurred_fractional_difference = scipy.ndimage.gaussian_filter(fractional_difference,sigma=gaussian_filter_size,mode='reflect')
-    temp = target_image_elements_removed[x,:,:] / (1.0 + blurred_fractional_difference)
-    temp[mask] = 0.12345678
-    
-    # Re-insert the elements
-    temp = insert_elements_into_TXM_image(temp, beam_energy, get_processed_image(target_scan_number, 'thickness_Mn')[:,:,0], get_processed_image(target_scan_number, 'thickness_Cu')[:,:,0], get_processed_image(target_scan_number, 'thickness_Bi')[:,:,0], remove_elements)
-    target_image[x,:,:] = temp
-    
-    filename="%.4f" % target_scan_number
-    filename_string = 'processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'    
-    h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
-    h5object['xray_images'][...] = target_image      
-    h5object.close()
+def deflicker_using_average_image_elements_removed(target_scan_numbers , averaged_image_filename , gaussian_filter_size , beam_energy,  remove_elements):
+    for i in range(0,len(target_scan_numbers)):
+        target_scan_number = target_scan_numbers[i]
+        print(target_scan_number)                                                                                                                       # beam_energy can be '6520' or '6600' or '8970' or '9050'
+        # Get the target image
+        target_image                  = get_processed_image(target_scan_number, 'xray_images',      'none'    )
+        target_image_elements_removed = get_processed_image(target_scan_number, 'xray_images', remove_elements)
+        
+        temp_obj = h5py.File(data_directory+data_subdirectory+averaged_image_filename, 'r')
+        averaged_image_elements_removed = np.array(temp_obj['average_image'])
+        
+        # Calculate the fractional difference between the target image and the baseline image(s)
+        if beam_energy=='6520': x=0
+        if beam_energy=='6600': x=1
+        if beam_energy=='8970': x=2
+        if beam_energy=='9050': x=3
+        fractional_difference = (target_image_elements_removed[x,:,:] - averaged_image_elements_removed)/averaged_image_elements_removed
+        fractional_difference[fractional_difference> 0.5] = 0.0   #Chop out 
+        fractional_difference[fractional_difference<-0.5] = 0.0
+        mask = np.where(target_image_elements_removed[x,:,:]==0.12345678)
+        fractional_difference[mask] = 0.0  # A value of 0.0 is benign for out-of-bounds pixels
+        
+        # Blur the fractional difference image and then use it to correct the target_image_elements_removed, 
+        blurred_fractional_difference = scipy.ndimage.gaussian_filter(fractional_difference,sigma=gaussian_filter_size,mode='reflect')
+        temp = target_image_elements_removed[x,:,:] / (1.0 + blurred_fractional_difference)
+        temp[mask] = 0.12345678
+        
+        # Re-insert the elements
+        temp = insert_elements_into_TXM_image(temp, beam_energy, get_processed_image(target_scan_number, 'thickness_Mn')[:,:,0], get_processed_image(target_scan_number, 'thickness_Cu')[:,:,0], get_processed_image(target_scan_number, 'thickness_Bi')[:,:,0], remove_elements)
+        target_image[x,:,:] = temp
+        
+        filename="%.4f" % target_scan_number
+        filename_string = 'processed_images_'+filename[0:5]+'_repeat_'+filename[6:8]+'_pos_'+filename[8:10]+'.h5'    
+        h5object = h5py.File(data_directory+data_subdirectory+filename_string, 'r+')
+        h5object['xray_images'][...] = target_image      
+        h5object.close()
     
 
-    # X-ray absorption coefficients in units of cm2/micro-moles    SEE EXCEL FILE Xray_absorption_coefficients.xlsx in folder /Users/damon/Desktop/BACKED_UP/WorkFiles/ReportsPublicationsPatents/20200420_Synchrotron_CuBiBirnessite_Results
-    a_6520_Mn = 3.07E-03;  a_6600_Mn = 2.44E-02; a_8970_Mn = 1.10E-02; a_9050_Mn = 1.07E-02; 
-    a_6520_Cu = 5.83E-03;  a_6600_Cu = 5.66E-03; a_8970_Cu = 2.39E-03; a_9050_Cu = 1.80E-02;
-    a_6520_Bi = 8.39E-02;  a_6600_Bi = 8.15E-02; a_8970_Bi = 3.65E-02; a_9050_Bi = 3.56E-02;
-    a_6520_El = 3.26E-03;  a_6600_El = 3.14E-03; a_8970_El = 1.23E-03; a_9050_El = 1.20E-03; # <----- One part NaOH to 5 parts H2O (mole ratio) , 37% NaOH solution
-    a_6520_C  = 1.03E-04;  a_6600_C  = 9.91E-05; a_8970_C  = 3.69E-05; a_9050_C  = 3.59E-05;
 
 
-def deflicker_9050_using_8970(scan_numbers):
-    
+
+def deflicker_9050_using_8970(scan_numbers):    
     for i in range(0,len(scan_numbers)):
         print(scan_numbers[i])
         image_8970 = get_processed_image(scan_numbers[i], '8970')[:,:,0]
