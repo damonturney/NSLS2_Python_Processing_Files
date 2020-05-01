@@ -1338,6 +1338,7 @@ def deflicker_using_average_image_elements_removed(target_scan_number , averaged
 def deflicker_9050_using_8970(scan_numbers):
     
     for i in range(0,len(scan_numbers)):
+        print(scan_numbers[i])
         image_8970 = get_processed_image(scan_numbers[i], '8970')[:,:,0]
         image_9050 = get_processed_image(scan_numbers[i], '9050')[:,:,0]
         image_8970[np.where(image_8970<0.000001)]=0.000001
@@ -1360,7 +1361,7 @@ def deflicker_9050_using_8970(scan_numbers):
         correction[mask2]=1.0 
         
         #Make a blurred image of the correction
-        blurred_correction = scipy.ndimage.gaussian_filter(correction,sigma=20,mode='reflect')
+        blurred_correction = scipy.ndimage.gaussian_filter(correction,sigma=75,mode='reflect')
         blurred_correction[mask1]=1.0
         blurred_correction[mask2]=1.0
         
