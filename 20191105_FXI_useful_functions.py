@@ -100,7 +100,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # 0) make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5') to create average darkfield image for the 5 sec exposed images (Mn) and make_average_image((range(34566,34725,2), 'img_dark',  'ave_dark_2p5s_exposure_34566_34724.h5') 2.5s exposed images (Cu):  
 # 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34873.h5','ave_dark_2p5s_exposure_34566_34724.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
 # 2) align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_elemental_moles_per_cm2(i);   
-# 3) deflicker_xray_images_time_series(range(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
+# 3) deflicker_xray_images_time_series(np.arange(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
 # 4) deflicker_9050_using_8970(scan_numbers): to deflicker the 9050 images by calculating the difference between the 8970 and 9050 images and looking for when the 9050 are brighter than it should be
 # 5) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
 
@@ -537,7 +537,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     # The animation iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
     # The animation uses FFMPEG (https://www.ffmpeg.org/ffmpeg-codecs.html#libvpx) to access video codecs.  I think by default it uses the h.264.  vpxenc (called libvpx by FFMPEG) which is explained here https://www.webmproject.org/docs/encoder-parameters/
     animation_handle=animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    writer = animation.FFMpegWriter(fps=15,bitrate=100000)  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
+    writer = animation.FFMpegWriter(fps=15,dpi=500)#bitrate=100000)  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
     animation_handle.save(output_filename, writer=writer)
 
 
