@@ -104,7 +104,9 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 # 4) deflicker_9050_using_8970(scan_numbers): to deflicker the 9050 images by calculating the difference between the 8970 and 9050 images and looking for when the 9050 are brighter than it should be
 # 5) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
 
-#  MAYBE USE LONGER TIME SERIES FOR DEFLICKERING!  YOU SHOULD LOOK AT A TIME SERIES OF BLURRED BRIGHTNESS .  THERE APPEARS TO BE 5 STATES OF THE PARTICLES.  DOES BRIGHTNESS CHANGE FOR EACH OF THESE STATES?  IF NOT, THEN YOU CAN USE A VERRRRY LONG TIMER SERIES FOR DEFLICKERING!
+#  MAYBE USE 7 IMAGES OF TIME SERIES FOR DEFLICKERING? 
+#  MAYBE RUN THE SINGLE IMAGE DEFLICKER (WITH REMOVE ELEMENTS) ON THE OTHER BEAM ENERGIES?
+#  FIGURE OUT IF THE BISMUTH GHOSTS ARE REAL OR NOT
 
 # 5) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'Bi')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
 # 6) deflicker_using_average_image_elements_removed(34703,'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 50, '8970', 'BiCu')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray imagedeflicker the 8970 eV images after removing Bi and Cu from the 8970 eV images
@@ -417,8 +419,8 @@ def calculate_elemental_moles_per_cm2(filenames, carbon_thickness=175, total_thi
     
 
 
-# The variable image_used_for_plot is something like 'Mn_raw_im1' or 'moles_Bi_per_cm2' et cetera
-def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds, seconds_per_movie_frame, output_filename):
+#  image_used_for_plot exmaples 'Mn_raw_im1' or 'moles_Bi_per_cm2' .      
+def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used_for_plot, movie_time_span_seconds=27000, seconds_per_movie_frame=40, output_filename='test.mp4'):
         
     # Read timestamps of the images, The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)
     datetime_array_xanes = np.array([])
@@ -443,18 +445,17 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     biologic_start_time=datetime.datetime.strptime(thirteenth_line[25:44],'%m/%d/%Y %H:%M:%S')
     
     # Create the first plot (figure layout, axes, et cetera)
-    figure_width = 10    #figsize=(       height             ,   width     )
-    figure_height = 1080/1280*figure_width/1.5 
+    im=get_processed_image(txm_scan_numbers[0],image_used_for_plot)
+    pixels_per_inch = 300 # pixels per inch
+    figure_width = im.shape[1]/pixels_per_inch * 3/2  # the 3/2 expands the width figure beyond the width of the xray_image so that blank space exists for the potentiostat data
+    figure_height = (figure_width*2/3) * im.shape[0]/im.shape[1] # (figure_width*2/3) is the displayed-width of the xray_image
     fig_han = plt.figure(figsize=(figure_width, figure_height ))
-    closest_index_txm=0
-    global closest_index_txm_previous
-    closest_index_txm_previous = -1
-    im=get_processed_image(txm_scan_numbers[closest_index_txm],image_used_for_plot)
+    
     #debuffer = calculate_image_debuffer_multiple_files(txm_scan_numbers)
     #im=im[debuffer[2]:debuffer[3],debuffer[0]:debuffer[1]]
     im_4_show = 1.0*im
-    # The new axis size:left, bottom,         width                                    ,   height
-    im_axes = plt.axes([0.0,   0.0  , (im.shape[1]-1)/im.shape[0]*figure_height/figure_width,   1.0   ])
+    # The new axis size:left, bottom,    width  ,  height
+    im_axes = plt.axes([0.0,   0.0    ,   2/3   ,   1.0   ])
     im_axes.set_axis_off()
     # Adjust the Brightnewss & Contrast
     if image_used_for_plot == 'elemental_RGB':
@@ -501,9 +502,10 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     # Show the image number    
     im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=7.8)           
     
-   
-    def change_imshow(frame_num):
-        global closest_index_txm_previous
+    # I tried for months to use matplotlib.animation but it became obvious that high-quality videos require raw linux-command-line use of ffmpeg, so now I'm saving the images to a "video_images" temp folder and running ffmpeg on the command-line
+    closest_index_txm_previous = -1
+    os.system('rm video_images/*')
+    for frame_num in range(int(movie_time_span_seconds/seconds_per_movie_frame)):
         frame_time = biologic_start_time + datetime.timedelta(seconds = frame_num*seconds_per_movie_frame) - datetime.timedelta(minutes = 3) #The Biologic Computer time was 3 Minutes AHEAD of "real" time ( aka the xanes images times)   
         closest_index_biologic=abs(biologic_data['time/s'].values - frame_num*seconds_per_movie_frame).argmin() #One frame per 20 seconds
         scatter_han.set_offsets([biologic_data['Ewe/V'].values[closest_index_biologic],biologic_data['<I>/mA'].values[closest_index_biologic]*1000])
@@ -532,22 +534,11 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
             # Print the image number next to the image
             im_id_text.set_text('scan: ' + str(txm_scan_numbers[closest_index_txm]))           
             print('displaying scan: ' + str(txm_scan_numbers[closest_index_txm]) + ' for time ' + str(frame_num*seconds_per_movie_frame) + ' seconds (' + datetime.datetime.strftime(frame_time, '%Y-%m-%d %H:%M:%S' ) + ')')
-
-        
-    # The animation iterates through e.g. "frames=range(15)" calling the function e.g "change_imshow" , and inserts a millisecond time delay between frames of e.g. "interval=100".
-    # The animation uses FFMPEG (https://www.ffmpeg.org/ffmpeg-codecs.html#libvpx) to access video codecs.  I think by default it uses the h.264.  vpxenc (called libvpx by FFMPEG) which is explained here https://www.webmproject.org/docs/encoder-parameters/
-    animation_handle=matplotlib.animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    #plt.rcParams['animation.ffmpeg_path'] = '/usr/local/bin/ffmpeg' 
-    Writer = matplotlib.animation.writers['ffmpeg']
-    writer = Writer(fps=15, codec='hevc', extra_args=[ '-lossless', '1'])
-    animation_handle.save(output_filename, writer=writer)
-
-
-    #lossless
-    # animation_handle=matplotlib.animation.FuncAnimation(fig_han, change_imshow, frames=range(int(movie_time_span_seconds/seconds_per_movie_frame)), blit=False, interval=100, repeat=False)
-    # Writer = matplotlib.animation.writers['ffmpeg']
-    # writer = Writer(fps=15, codec='ffv1')#bitrate=100000)  #codec='libx264')#, codec='libvpx', ,  extra_args=[ '-crf', '0']
-    # animation_handle.save(output_filename, writer=writer)    
+        #Save the image to video_images
+        plt.savefig('video_images/'+("%04d" % frame_num)+'.png', dpi=pixels_per_inch)
+    
+    # ffmpeg -i %04d.png -vcodec libx265 -x265-params "lossless=1" -preset slow -vf format=gray,format=yuv420p testttt.mp4    
+    os.system('ffmpeg -i video_images/%04d.png -vcodec libx265 -x265-params "lossless=1" -preset slow -vf format=gray,format=yuv420p testttt.mp4')
 
 
 
