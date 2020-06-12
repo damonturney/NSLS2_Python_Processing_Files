@@ -481,7 +481,8 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-203:-18,:]=1.0  #Paint a white background
         im_4_show[-45*(j)-43 :-45*(j)-23,-181:-39,:]=0.0  #Paint the background black behind the colorbar (important for RGB images).   THIS ALSO MAKES A BLACK BORDER.
         im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar    
-        im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]) + '                   ' + "%.1f" % (zmax[j]),fontsize=4.5)
+        string_temp = "%.1f" % (zmin[j]); im_axes.text(im.shape[1]-194-int(len(string_temp)/2),im.shape[0]-45*j-7,string_temp,fontsize=4.5)  #print the smallest shown color of colorbar
+        string_temp = "%.1f" % (zmax[j]); im_axes.text(im.shape[1]-57 -int(len(string_temp)/2),im.shape[0]-45*j-7,string_temp,fontsize=4.5)  #print the largest shown color of colorbar
     if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
     # Show the image
     im_show_handle = im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
@@ -519,15 +520,16 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
                 temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
                 im_4_show[:,:,j] = temp 
             # Paint the scale bar onto the im_4_show image
-            for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
+            for j in range(im.shape[2]): im_4_show[-30:-8,48:175,j]=1.0
+            im_axes.text(79,im.shape[0]-11,'5 um',fontsize=6.0)
             # Paint the colorbar onto the im_4_show image
             for j in range(im.shape[2]): 
-                im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-                if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-                im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
-                im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
-                im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
-                im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
+                im_4_show[-45*(j+1)-1:-45*(j)-5,-203:-18,:]=1.0  #Paint a white background
+                if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-203:-18,:]=1.0  #Paint a white background
+                im_4_show[-45*(j)-43 :-45*(j)-23,-181:-39,:]=0.0  #Paint the background black behind the colorbar (important for RGB images).   THIS ALSO MAKES A BLACK BORDER.
+                im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar    
+                string_temp = "%.1f" % (zmin[j]); im_axes.text(im.shape[1]-194-int(len(string_temp)/2),im.shape[0]-45*j-7,string_temp,fontsize=4.5)  #print the smallest shown color of colorbar
+                string_temp = "%.1f" % (zmax[j]); im_axes.text(im.shape[1]-57 -int(len(string_temp)/2),im.shape[0]-45*j-7,string_temp,fontsize=4.5)  #print the largest shown color of colorbar
             # Show the image
             if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
             im_show_handle.set_data(im_4_show)
