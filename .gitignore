@@ -4,3 +4,4 @@
 *.hdf5
 *.avi
 video_images/
+.DS_Store

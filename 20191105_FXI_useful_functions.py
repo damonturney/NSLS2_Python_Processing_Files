@@ -45,11 +45,17 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ##########################################################
 
 ### Lists of XANES Scan Numbers ##########################
-# location 1 TOTAL list of movie xanes files
+# TOTAL list of Mn-wavelength (6520eV, 6600eV) xanes files at location 1    
 # xanes_files = np.concatenate((range(34565,34725,2),range(34726,34875,2)))
 #
-# location 2 TOTAL list of movie xanes files
+# TOTAL list of Cu-wavelength (8970eV, 9050eV) xanes files at location 1    
+# xanes_files = np.concatenate((range(34566,34725,2),range(34727,34875,2)))
+#
+# TOTAL list of Mn-wavelength (6520eV, 6600eV) xanes files at location 2
 # xanes_files = np.concatenate((range(34565.0001,34725.0001,2),range(34726.0001,34875.0001,2)))
+#
+# TOTAL list of Cu-wavelength (8970eV, 9050eV) xanes files at location 2    
+# xanes_files = np.concatenate((range(34566.0001,34725.0001,2),range(34727.0001,34875.0001,2)))
 #
 # scans 34565 to 34644 (scans 34645 to 34657 were collected while the potenttiostat was in OCV because it's program had prematurely ended)
 # biologic_file = '20191107_Cu-Bi-Birnessite_37NaOH_more_loading_C04.mpt'
@@ -68,7 +74,7 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 ### List of functions in this file ########################
 # make_average_image(scan_numbers, which_image, output_filename ): return(average_scalar_series, std_scalar_series)
 # internally_align_h5_file(Mn_filename, im2_cropping, cc_search_distance, average_dark_image_filename_Mn='none', average_dark_image_filename_Cu='none',):    #cc_search_distance is the cross correlation search distance [left, right, top, bottom]    
-# align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
+# globally_align_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  
 # debuffer_multiple_image_files(scan_numbers):
 # deflicker_xray_images(scan_numbers,gaussian_filter_sizes,remove_elements='no'):
 # calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250):   
@@ -96,26 +102,22 @@ object_list_filenames_tiffiles = list(object_recursiveglob_tiffiles)
 
 
 ### Workflow ##############################################
-# NOTE: ALL THE COPPER H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE MN FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
+# NOTE: ALL THE 8970 & 9050 H5 FILES (MULTIPOS_2D_XANES...H5 FILES) USED 2.5 SEC EXPOSURE TIME WHEREAS THE 6520 & 6600 FILES USED 5 SECDONS!!!  ALSO, SCAN 34600 HAS A BAD DARK IMAGE SO YOU HAVE TO REMEMBER TO NOT USE IT’S DARK IMAGE!!!  
 # 0) make_average_image((range(34565,34725,2), 'img_dark',  'ave_dark_5s_exposure_34565_34723.h5') to create average darkfield image for the 5 sec exposed images (Mn) and make_average_image((range(34566,34725,2), 'img_dark',  'ave_dark_2p5s_exposure_34566_34724.h5') 2.5s exposed images (Cu):  
-# 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34873.h5','ave_dark_2p5s_exposure_34566_34724.h5')  on each Manganese multipos_2D_xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
-# 2) align_processed_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_elemental_moles_per_cm2(i);   
+# 1) internally_align_h5_file(scan_number,[50,350,300,300],[50,100,75,75],'ave_dark_5s_exposure_34565_34873.h5','ave_dark_2p5s_exposure_34566_34724.h5')  on each Manganese xanes_scan2_[]...h5 file to align the images.     NOTE:  file 34725 is missing, see your beamline notes -- before 34725 the Mn files are odd numbered and after 34725 the Mn files are even numbered .   NOTE: the [50,350,300,300] chops off L.R.T.B. so that the copper TEM mesh doesn't confuse the cc_image. The  [50,100,75,75] says how far to search in each direction when calculating the cross correlations.  The cc_search_distance can't be larger than the im2_cropping!!! 
+# 2) globally_align_images_time_series(range(34565,34725,2),[100,350,300,300],[50,100,75,75])   The im2_cropping=[100,350,200,200] is how much of the sides and top/bottom to cutoff im2.    Use a command like for i in range(34675,34725,2): calculate_elemental_moles_per_cm2(i);   
 # 3) deflicker_xray_images_time_series(np.arange(34565,34725,2),[100,100,50,50],background_image='none')  where I found 6720 and 6600 eV to need a large Gaussian_filter_Size of 100 meanwhile 8970 and 9050 eV used a smaller Gaussian_Filter_Size of 50.   This step partially fixes the homogeneity problems.  I have to do further work in steps 5 and 6 to better resolve the homogeneity problems for the 8970 eV and 9050 eV data.
-# 4) deflicker_9050_using_8970(scan_numbers): to deflicker the 9050 images by calculating the difference between the 8970 and 9050 images and looking for when the 9050 are brighter than it should be
+# 4) deflicker_9050_using_8970(scan_numbers): to deflicker the 9050 images (because they're the MOST flickery) by calculating the difference between the 8970 and 9050 images and looking for when the 9050 are brighter than it could possibly be.
 # 5) calculate_elemental_moles_per_cm2(filename, carbon_thickness=180, total_thickness=250): 
+# 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
 
 #  MAYBE USE 7 IMAGES OF TIME SERIES FOR DEFLICKERING? 
 #  MAYBE RUN THE SINGLE IMAGE DEFLICKER (WITH REMOVE ELEMENTS) ON THE OTHER BEAM ENERGIES?
 #  FIGURE OUT IF THE BISMUTH GHOSTS ARE REAL OR NOT
-
-# 5) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'Bi')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
-# 6) deflicker_using_average_image_elements_removed(34703,'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 50, '8970', 'BiCu')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray imagedeflicker the 8970 eV images after removing Bi and Cu from the 8970 eV images
-# 8) maybe deflicker by time series again?
-# 9) Calculate the location of the elements by using the simpler calculation that uses just two images for Mn, and two images for Cu.
-
-# 
-# 5) 
-# 6) make_movie_with_potentiostat_data(range(34565,34725,2),'20191107_Cu-Bi-Birnessite_37NaOH_more_loading1_and2.mpt', 'Mn_raw_im1', 15500,40, '34565_34599_6520eV.mp4')
+# ?) make_average_image(np.arange(34565,34725,2), '8970', 'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 'Bi')   to make a relable image so that we can fix the homogeneity of xanes data acquired at the 8970 eV beam energy (only the 8970 eV and 9050 eV had serious problems and the 8970 eV data was the only data I could find a way to fix)
+# ?) deflicker_using_average_image_elements_removed(34703,'ave_8970_34565_34725_Bi_and_Mn_removed.h5', 50, '8970', 'BiCu')   Now we run deflicker again with extra information of where the elements are located, so we can remove the effect of the elements and homogenize each x-ray imagedeflicker the 8970 eV images after removing Bi and Cu from the 8970 eV images
+# ?) maybe deflicker by time series again?
+# ?) Calculate the location of the elements by using the simpler calculation that uses just two images for Mn, and two images for Cu.
 ############################################################
 
 
@@ -242,7 +244,7 @@ def internally_align_h5_file(Mn_filenames, im2_cropping, cc_search_distance, ave
     
 
 # Filename MUST be supplied as a numpy vector of file numbers
-def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  # Filename MUST be supplied as a numpy vector of file numbers
+def globally_align_images_time_series(scan_numbers,im2_cropping, cc_search_distance):  # Filename MUST be supplied as a numpy vector of file numbers
     for i in range(1,len(scan_numbers)):
         
         print(scan_numbers[i])
@@ -256,7 +258,7 @@ def align_processed_images_time_series(scan_numbers,im2_cropping, cc_search_dist
         filename2="%.4f" % scan_numbers[i]
         filename2='processed_images_'+filename2[0:5]+'_repeat_'+filename2[6:8]+'_pos_'+filename2[8:10]+'.h5'
         h5object2= h5py.File(data_directory+data_subdirectory+filename2, 'r+')
-        h5object2.create_dataset('data_processing_note2', dtype=h5py.string_dtype(),data='align_processed_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
+        h5object2.create_dataset('data_processing_note2', dtype=h5py.string_dtype(),data='globally_align_images_time_series(scan_numbers,'+str(im2_cropping)+','+str(cc_search_distance)+')')
         xanes_raw_ims2 = np.array(h5object2['xray_images'])
                 
         # Figure out how much dummy values to remove on each side.  For example: value of debuffer[0] is the maximum column number of where the dummy values extend on the LHS-side of any one of the images(xanes_raw_ims1 or xanes_raw_ims2), and likewise debuffer[2] is the maximum row that the dummy values extend on the topside of any one of the images (xanes_raw_ims1 or xanes_raw_ims2)
@@ -458,7 +460,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     im_axes = plt.axes([0.0,   0.0    ,   2/3   ,   1.0   ])
     im_axes.set_axis_off()
     # Adjust the Brightnewss & Contrast
-    if image_used_for_plot == 'elemental_RGB':
+    if image_used_for_plot == 'elemental_RGB':   # The caller can state 'elemental_RGB' as the image_used_for_plot
         zmin = np.ones(3)
         zmax = np.ones(3)
         zmin[0], zmax[0] = calculate_brightness_contrast(txm_scan_numbers, 'Mn', 0.005, 0.995)
@@ -471,36 +473,34 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         temp = (im[:,:,j] - zmin[j])/zmax[j]; temp[temp<0.0]=0.0;  temp[temp>1.0]=1.0; 
         im_4_show[:,:,j] = temp    
     # Paint the scale bar onto the im_4_show image
-    for j in range(im.shape[2]): im_4_show[45:65,-175:-48,j]=1.0
-    im_axes.text(im.shape[1]-138,62,'5 um',fontsize=7.8)
+    for j in range(im.shape[2]): im_4_show[-30:-8,48:175,j]=1.0
+    im_axes.text(79,im.shape[0]-11,'5 um',fontsize=6.0)
     # Paint the colorbar onto the im_4_show image
     for j in range(im.shape[2]): 
-        im_4_show[-45*(j+1)-1:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-        if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-195:-23,:]=1.0  #Paint a white background
-        im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,:]=0.0  #Paint the background black behind the colorbar (important for RGB images)
-        im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar
-        im_4_show[-45*(j+1)+3:-45*j-24,-180,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-40,:] = 0.0; im_4_show[-45*(j+1)+3,-180:-40,:] = 0.0; im_4_show[-45*j-24,-180:-40,:] = 0.0;     
-        im_4_show[-45*(j+1)+3:-45*j-24,-181,:] = 0.0; im_4_show[-45*(j+1)+3:-45*j-24,-39,:] = 0.0; im_4_show[-45*(j+1)+2,-180:-40,:] = 0.0; im_4_show[-45*j-23,-180:-40,:] = 0.0;     
-        im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]) + '                   ' + "%.1f" % (zmax[j]),fontsize=6.5)
+        im_4_show[-45*(j+1)-1:-45*(j)-5,-203:-18,:]=1.0  #Paint a white background
+        if image_used_for_plot == 'elemental_RGB': im_4_show[-45*(j+1)-5:-45*(j)-5,-203:-18,:]=1.0  #Paint a white background
+        im_4_show[-45*(j)-43 :-45*(j)-23,-181:-39,:]=0.0  #Paint the background black behind the colorbar (important for RGB images).   THIS ALSO MAKES A BLACK BORDER.
+        im_4_show[-45*(j)-42 :-45*(j)-24,-180:-40,j]=np.tile(np.arange(0,1.0,1.0/140),(18,1))  #Paint a colorbar    
+        im_axes.text(im.shape[1]-195,im.shape[0]-45*j-7,"%.1f" % (zmin[j]) + '                   ' + "%.1f" % (zmax[j]),fontsize=4.5)
     if im_4_show.shape[2] == 1: im_4_show = im_4_show[:,:,0]
     # Show the image
     im_show_handle = im_axes.imshow(im_4_show,cmap='gray',interpolation='none', vmin=0.0, vmax=1.0, label=False)
     # Make the Potentiostat Axis
     # The new axis size:                left                                           ,   bottom,                               width,                             , height
     iV_data_axes = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width + 0.052,   0.085,  1.0 - im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065 ,    0.9])
-    iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 8)    
+    iV_data_axes.tick_params(axis = 'both', which = 'major', labelsize = 6)    
     iV_data_axes.plot(biologic_data['Ewe/V'].values,biologic_data['<I>/mA'].values*1000)
-    iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=9,labelpad=1)
+    iV_data_axes.set_xlabel('Electrode Voltage (V)',fontsize=7,labelpad=3)
     y_range = iV_data_axes.get_ylim()[1] - iV_data_axes.get_ylim()[0]
-    iV_data_axes.set_ylabel('Current (uA)', fontsize=9,labelpad=-9, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
+    iV_data_axes.set_ylabel('Current (uA)', fontsize=7,labelpad=-6, position=(0,-iV_data_axes.get_ylim()[0]/y_range))
     scatter_han = iV_data_axes.scatter(biologic_data['Ewe/V'].values[0],biologic_data['<I>/mA'].values[0]*1000,c='r',s=20,zorder=1)
     # Make the Authorship label Axis
-    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.065,   0.983,  0.05 ,    0.05],zorder=2)
-    authorship_label_axis.set_axis_off();  #authorship_label_axis.imshow(np.ones((10,100)),cmap='gray',vmin=0,vmax=1.0)
+    authorship_label_axis = plt.axes([im.shape[1]/im.shape[0]*figure_height/figure_width - 0.095,   0.984,  0.05 ,    0.005],zorder=2)  # left, bottom, width, height
+    authorship_label_axis.set_axis_off(); 
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
-    authorship_label_axis.text(0,0.0,'D.E.Turney et al. 2020',alpha=0.85,size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
+    authorship_label_axis.text(0,-0.3,'D.E.Turney et al. 2020',alpha=0.65,size=5.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
-    im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=7.8)           
+    #im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=6.0)           
     
     # I tried for months to use matplotlib.animation but it became obvious that high-quality videos require raw linux-command-line use of ffmpeg, so now I'm saving the images to a "video_images" temp folder and running ffmpeg on the command-line
     closest_index_txm_previous = -1
@@ -538,7 +538,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
         plt.savefig('video_images/'+("%04d" % frame_num)+'.png', dpi=pixels_per_inch)
     
     # ffmpeg -i %04d.png -vcodec libx265 -x265-params "lossless=1" -preset slow -vf format=gray,format=yuv420p testttt.mp4    
-    os.system('ffmpeg -i video_images/%04d.png -vcodec libx265 -x265-params "lossless=1" -preset slow -vf format=gray,format=yuv420p testttt.mp4')
+    os.system('ffmpeg -i video_images/%04d.png -vcodec libx265 -x265-params "lossless=1" -preset slow -vf format=gray,format=yuv420p '+ output_filename)
 
 
 
