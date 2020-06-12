@@ -500,7 +500,7 @@ def make_movie_with_potentiostat_data(txm_scan_numbers,biologic_file, image_used
     authorship_label_axis.text(0,0.1,'                    ',size=7.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     authorship_label_axis.text(0,-0.3,'D.E.Turney et al. 2020',alpha=0.65,size=5.5,bbox=dict(boxstyle='square,pad=0.0',ec='none',fc='w'))
     # Show the image number    
-    #im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=6.0)           
+    im_id_text = im_axes.text(im.shape[1],im.shape[0]-5,'img: ' + str(txm_scan_numbers[0]) ,fontsize=6.0,alpha=0.0)           
     
     # I tried for months to use matplotlib.animation but it became obvious that high-quality videos require raw linux-command-line use of ffmpeg, so now I'm saving the images to a "video_images" temp folder and running ffmpeg on the command-line
     closest_index_txm_previous = -1
